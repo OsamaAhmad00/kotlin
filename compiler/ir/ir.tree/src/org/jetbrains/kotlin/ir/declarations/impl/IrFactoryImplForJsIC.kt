@@ -15,10 +15,10 @@ import org.jetbrains.kotlin.serialization.deserialization.descriptors.Deserializ
 import org.jetbrains.kotlin.types.Variance
 import java.util.*
 
-class IrFactoryImplForJsIC(override val stageController: StageController) : AbstractIrFactoryImpl(), IdSignatureRetriever {
+class IrFactoryImplForJsIC(stageController: StageController) : AbstractIrFactoryImplForIC(stageController) {
     private val declarationToSignature = WeakHashMap<IrDeclaration, IdSignature>()
 
-    private fun <T : IrDeclaration> T.register(): T {
+    override fun <T : IrDeclaration> T.register(): T {
         val parentSig = stageController.currentDeclaration?.let { declarationSignature(it) } ?: return this
 
         stageController.createSignature(parentSig)?.let { declarationToSignature[this] = it }
@@ -29,6 +29,10 @@ class IrFactoryImplForJsIC(override val stageController: StageController) : Abst
     override fun declarationSignature(declaration: IrDeclaration): IdSignature? {
         return declarationToSignature[declaration] ?: declaration.symbol.signature ?: declaration.symbol.privateSignature
     }
+}
+
+abstract class AbstractIrFactoryImplForIC(override val stageController: StageController) : AbstractIrFactoryImpl(), IdSignatureRetriever {
+    protected abstract fun <T : IrDeclaration> T.register(): T
 
     override fun createAnonymousInitializer(
         startOffset: Int,
