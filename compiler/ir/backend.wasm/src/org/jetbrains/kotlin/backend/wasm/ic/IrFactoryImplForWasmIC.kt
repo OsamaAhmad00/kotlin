@@ -5,11 +5,36 @@
 
 package org.jetbrains.kotlin.backend.wasm.ic
 
+import org.jetbrains.kotlin.backend.wasm.WasmCompilerWithIC
+import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
+import org.jetbrains.kotlin.ir.backend.js.ic.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.AbstractIrFactoryImplForIC
 import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.util.dump
+import java.io.File
 import java.util.*
+
+class WasmICContext(private val allowIncompleteImplementations: Boolean) : PlatformDependentICContext {
+    override fun createIrFactory(): IrFactory =
+        IrFactoryImplForWasmIC(WholeWorldStageController())
+
+    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): JsIrCompilerICInterface =
+        WasmCompilerWithIC(mainModule, configuration, allowIncompleteImplementations)
+
+    override fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File?): SrcFileArtifactBase =
+        WasmSrcFileArtifact(srcFilePath, fragments as? WasmIrProgramFragments, astArtifact)
+
+    override fun createModuleArtifact(
+        moduleName: String,
+        fileArtifacts: List<SrcFileArtifactBase>,
+        artifactsDir: File?,
+        forceRebuildJs: Boolean,
+        externalModuleName: String?,
+    ): ModuleArtifactBase =
+        WasmModuleArtifact(moduleName, fileArtifacts.map { it as WasmSrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
+}
 
 class IrFactoryImplForWasmIC(stageController: StageController) : AbstractIrFactoryImplForIC(stageController) {
     private val declarationToSignature = WeakHashMap<IrDeclaration, IdSignature>()

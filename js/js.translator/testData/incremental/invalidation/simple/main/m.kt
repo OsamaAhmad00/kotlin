@@ -6,3 +6,14 @@ fun box(stepId: Int): String {
     }
     return "OK"
 }
+
+@kotlin.wasm.WasmExport
+fun wasi_box(stepId: Int): Int {
+    val result = box(stepId)
+    if (result != "OK") {
+        println("Expected OK but found $result on step $stepId")
+        return 0
+    } else {
+        return 1
+    }
+}

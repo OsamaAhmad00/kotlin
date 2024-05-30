@@ -108,11 +108,11 @@ class JsIrBackendContext(
     override val es6mode = configuration[JSConfigurationKeys.USE_ES6_CLASSES] ?: false
     val platformArgumentsProviderJsExpression = configuration[JSConfigurationKeys.DEFINE_PLATFORM_MAIN_FUNCTION_ARGUMENTS]
 
-    val externalPackageFragment = mutableMapOf<IrFileSymbol, IrFile>()
+    override val externalPackageFragment = mutableMapOf<IrFileSymbol, IrFile>()
 
-    val additionalExportedDeclarations = hashSetOf<IrDeclaration>()
+    override val additionalExportedDeclarations = hashSetOf<IrDeclaration>()
 
-    val bodilessBuiltInsPackageFragment: IrPackageFragment = IrExternalPackageFragmentImpl(
+    override val bodilessBuiltInsPackageFragment: IrPackageFragment = IrExternalPackageFragmentImpl(
         DescriptorlessExternalPackageFragmentSymbol(),
         FqName("kotlin")
     )

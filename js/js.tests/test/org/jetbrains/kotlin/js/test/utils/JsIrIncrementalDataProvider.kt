@@ -154,7 +154,7 @@ class JsIrIncrementalDataProvider(private val testServices: TestServices) : Test
         for (rebuiltFile in rebuiltFiles) {
             if (rebuiltFile.first.module == mainModuleIr) {
                 val output = ByteArrayOutputStream()
-                rebuiltFile.second.serializeTo(output)
+                rebuiltFile.second.serialize(output)
                 moduleCache.binaryAsts[rebuiltFile.first.fileEntry.name] = output.toByteArray()
             }
         }

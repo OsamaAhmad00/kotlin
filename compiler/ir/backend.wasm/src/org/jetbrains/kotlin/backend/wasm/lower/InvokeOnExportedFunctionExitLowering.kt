@@ -118,7 +118,7 @@ internal class InvokeOnExportedFunctionExitLowering(val context: WasmBackendCont
     override fun lower(irFile: IrFile) {
         if (context.isWasmJsTarget) return
         for (declaration in irFile.declarations) {
-            if (declaration is IrFunction && (declaration.isExported() || context.mainCallsWrapperFunction == declaration)) {
+            if (declaration is IrFunction && (declaration.isExported() /*|| context.mainCallsWrapperFunction == declaration*/)) {
                 processExportFunction(declaration)
             }
         }

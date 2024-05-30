@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.ir.declarations.impl.IrExternalPackageFragmentImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.linkage.partial.partialLinkageConfig
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrFileSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.DescriptorlessExternalPackageFragmentSymbol
 import org.jetbrains.kotlin.ir.types.IrTypeSystemContext
@@ -71,6 +72,7 @@ class WasmBackendContext(
     val kotlinClosureToJsConverters = mutableMapOf<String, IrSimpleFunction>()
     val jsClosureCallers = mutableMapOf<String, IrSimpleFunction>()
     val jsToKotlinClosures = mutableMapOf<String, IrSimpleFunction>()
+    val mainFunctionWrappers = mutableMapOf<IrFile, IrSimpleFunction>()
 
     val jsModuleAndQualifierReferences =
         mutableSetOf<JsModuleAndQualifierReference>()
@@ -89,42 +91,43 @@ class WasmBackendContext(
 
     private val internalPackageFragmentDescriptor = EmptyPackageFragmentDescriptor(builtIns.builtInsModule, kotlinWasmInternalPackageFqn)
     // TODO: Merge with JS IR Backend context lazy file
-    val internalPackageFragment by lazy {
-        IrFileImpl(object : IrFileEntry {
-            override val name = "<implicitDeclarations>"
-            override val maxOffset = UNDEFINED_OFFSET
+//    val internalPackageFragment by lazy {
+//        IrFileImpl(object : IrFileEntry {
+//            override val name = "<implicitDeclarations>"
+//            override val maxOffset = UNDEFINED_OFFSET
+//
+//            override fun getSourceRangeInfo(beginOffset: Int, endOffset: Int) =
+//                SourceRangeInfo(
+//                    "",
+//                    UNDEFINED_OFFSET,
+//                    UNDEFINED_LINE_NUMBER,
+//                    UNDEFINED_COLUMN_NUMBER,
+//                    UNDEFINED_OFFSET,
+//                    UNDEFINED_LINE_NUMBER,
+//                    UNDEFINED_COLUMN_NUMBER
+//                )
+//
+//            override fun getLineNumber(offset: Int) = UNDEFINED_LINE_NUMBER
+//            override fun getColumnNumber(offset: Int) = UNDEFINED_COLUMN_NUMBER
+//            override fun getLineAndColumnNumbers(offset: Int): LineAndColumn {
+//                return LineAndColumn(UNDEFINED_LINE_NUMBER, UNDEFINED_COLUMN_NUMBER)
+//            }
+//        }, internalPackageFragmentDescriptor, irModuleFragment).also {
+//            irModuleFragment.files += it
+//        }
+//    }
 
-            override fun getSourceRangeInfo(beginOffset: Int, endOffset: Int) =
-                SourceRangeInfo(
-                    "",
-                    UNDEFINED_OFFSET,
-                    UNDEFINED_LINE_NUMBER,
-                    UNDEFINED_COLUMN_NUMBER,
-                    UNDEFINED_OFFSET,
-                    UNDEFINED_LINE_NUMBER,
-                    UNDEFINED_COLUMN_NUMBER
-                )
+//    fun createInitFunction(identifier: String): IrSimpleFunction = irFactory.buildFun {
+//        name = Name.identifier(identifier)
+//        returnType = irBuiltIns.unitType
+//    }.apply {
+//        body = irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET)
+//        internalPackageFragment.addChild(this)
+//    }
 
-            override fun getLineNumber(offset: Int) = UNDEFINED_LINE_NUMBER
-            override fun getColumnNumber(offset: Int) = UNDEFINED_COLUMN_NUMBER
-            override fun getLineAndColumnNumbers(offset: Int): LineAndColumn {
-                return LineAndColumn(UNDEFINED_LINE_NUMBER, UNDEFINED_COLUMN_NUMBER)
-            }
-        }, internalPackageFragmentDescriptor, irModuleFragment).also {
-            irModuleFragment.files += it
-        }
-    }
-
-    fun createInitFunction(identifier: String): IrSimpleFunction = irFactory.buildFun {
-        name = Name.identifier(identifier)
-        returnType = irBuiltIns.unitType
-    }.apply {
-        body = irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET)
-        internalPackageFragment.addChild(this)
-    }
-
-    val fieldInitFunction = createInitFunction("fieldInit")
-    val mainCallsWrapperFunction = createInitFunction("mainCallsWrapper")
+//    val fieldInitFunction = createInitFunction("fieldInit")
+//    val mainCallsWrapperFunction = createInitFunction("mainCallsWrapper")
+    val fieldInitFunction: IrSimpleFunction by lazy { error("fieldInit") }
 
     override val sharedVariablesManager = WasmSharedVariablesManager(this)
 
@@ -214,4 +217,14 @@ class WasmBackendContext(
         irBuiltIns,
         configuration.irMessageLogger
     )
+
+    override val externalPackageFragment = mutableMapOf<IrFileSymbol, IrFile>()
+
+    override val additionalExportedDeclarations = hashSetOf<IrDeclaration>()
+
+    override val bodilessBuiltInsPackageFragment: IrPackageFragment = IrExternalPackageFragmentImpl(
+        DescriptorlessExternalPackageFragmentSymbol(),
+        FqName("kotlin")
+    )
+
 }

@@ -16,8 +16,8 @@ class WasmSymbol<out T : Any>(owner: T? = null) : WasmSymbolReadOnly<T> {
 
     @Suppress("UNCHECKED_CAST")
     override val owner: T
-        get() = _owner as? T
-            ?: error("Unbound wasm symbol $this")
+        get() = _owner as? T ?:
+            error("Unbound wasm symbol $this")
 
     @Suppress("UNCHECKED_CAST")
     fun bind(value: Any) {

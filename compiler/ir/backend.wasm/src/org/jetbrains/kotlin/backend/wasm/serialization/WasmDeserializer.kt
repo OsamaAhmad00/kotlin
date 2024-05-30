@@ -508,12 +508,6 @@ class WasmDeserializer(inputStream: InputStream) {
         return WasmCompiledModuleFragment.JsCodeSnippet(importName, jsCode)
     }
 
-    private fun deserializeFunWithPriority(): WasmCompiledModuleFragment.FunWithPriority {
-        val function = deserializeFunction()
-        val priority = deserializeString()
-        return WasmCompiledModuleFragment.FunWithPriority(function, priority)
-    }
-
     private fun deserializeString(): String {
         val length = b.readUInt32().toInt()
         val bytes = b.readBytes(length)
@@ -557,10 +551,10 @@ class WasmDeserializer(inputStream: InputStream) {
         functionTypes = deserializeReferencableAndDefinable(::deserializeIdSignature, ::deserializeFunctionType),
         gcTypes = deserializeReferencableAndDefinable(::deserializeIdSignature, ::deserializeTypeDeclaration),
         vTableGcTypes = deserializeReferencableAndDefinable(::deserializeIdSignature, ::deserializeTypeDeclaration),
-        classITableGcType = deserializeReferencableAndDefinable(::deserializeIdSignature, ::deserializeTypeDeclaration),
-        classITableInterfaceSlot = deserializeReferencableAndDefinable(::deserializeIdSignature, ::deserializeInt),
-        classITableInterfaceTableSize = deserializeReferencableAndDefinable(::deserializeIdSignature, ::deserializeInt),
-        classITableInterfaceHasImplementors = deserializeReferencableAndDefinable(::deserializeIdSignature, ::deserializeInt),
+        classITableGcType = deserializeReferencableElements(::deserializeIdSignature, ::deserializeTypeDeclaration),
+        classITableInterfaceSlot = deserializeReferencableElements(::deserializeIdSignature, ::deserializeInt),
+        classITableInterfaceTableSize = deserializeReferencableElements(::deserializeIdSignature, ::deserializeInt),
+        classITableInterfaceHasImplementors = deserializeReferencableElements(::deserializeIdSignature, ::deserializeInt),
         typeInfo = deserializeMap(::deserializeIdSignature, ::deserializeConstantDataElement),
         classIds = deserializeReferencableElements(::deserializeIdSignature, ::deserializeInt),
         interfaceIds = deserializeReferencableElements(::deserializeIdSignature, ::deserializeInt),
@@ -568,14 +562,14 @@ class WasmDeserializer(inputStream: InputStream) {
         stringLiteralPoolId = deserializeReferencableElements(::deserializeString, ::deserializeInt),
         constantArrayDataSegmentId = deserializeReferencableElements({ deserializePair({ deserializeList(::deserializeLong) }, ::deserializeType) }, ::deserializeInt),
         interfaceUnions = deserializeList { deserializeList(::deserializeIdSignature) },
-        declaredInterfaces = deserializeList(::deserializeIdSignature),
-        initFunctions = deserializeList(::deserializeFunWithPriority),
         uniqueJsFunNames = deserializeReferencableElements(::deserializeString, ::deserializeString),
         jsFuns = deserializeList(::deserializeJsCodeSnippet),
         jsModuleImports = deserializeSet(::deserializeString),
         exports = deserializeList(::deserializeExport),
         scratchMemAddr = deserializeSymbol(::deserializeInt),
-        stringPoolSize = deserializeSymbol(::deserializeInt)
+        stringPoolSize = deserializeSymbol(::deserializeInt),
+        fieldInitializers = deserializeList { deserializePair(::deserializeIdSignature, { deserializeList(::deserializeInstr) }) },
+        mainFunctionWrappers = deserializeList(::deserializeIdSignature)
     )
 
     private fun <T : WasmNamedModuleField> deserializeNamedModuleField(deserializeFunc: (String) -> T) =

@@ -12,8 +12,10 @@ import com.intellij.openapi.vfs.local.CoreLocalFileSystem
 import com.intellij.psi.PsiManager
 import com.intellij.psi.SingleRootFileViewProvider
 import com.intellij.testFramework.TestDataFile
-import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
-import org.jetbrains.kotlin.backend.common.phaser.toPhaseMap
+import org.jetbrains.kotlin.backend.wasm.compileWasm
+import org.jetbrains.kotlin.backend.wasm.ic.WasmICContext
+import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmCompiledFileFragment
+import org.jetbrains.kotlin.backend.wasm.writeCompilationResult
 import org.jetbrains.kotlin.cli.common.config.addKotlinSourceRoot
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
@@ -22,17 +24,15 @@ import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.languageVersionSettings
-import org.jetbrains.kotlin.ir.backend.js.JsICContext
-import org.jetbrains.kotlin.ir.backend.js.SourceMapsInfo
-import org.jetbrains.kotlin.ir.backend.js.ic.*
-import org.jetbrains.kotlin.ir.backend.js.jsPhases
-import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.*
+import org.jetbrains.kotlin.ir.backend.js.ic.CacheUpdater
+import org.jetbrains.kotlin.ir.backend.js.ic.DirtyFileState
+import org.jetbrains.kotlin.ir.backend.js.ic.KotlinLibraryFile
+import org.jetbrains.kotlin.ir.backend.js.ic.KotlinSourceFileMap
+import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.JsGenerationGranularity
+import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.safeModuleName
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
-import org.jetbrains.kotlin.js.test.converters.ClassicJsBackendFacade
-import org.jetbrains.kotlin.js.test.utils.MODULE_EMULATION_FILE
-import org.jetbrains.kotlin.js.testOld.V8IrJsTestChecker
 import org.jetbrains.kotlin.konan.file.ZipFileSystemCacheableAccessor
-import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.platform.wasm.WasmTarget
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.multiplatform.isCommonSource
 import org.jetbrains.kotlin.serialization.js.ModuleKind
@@ -41,9 +41,10 @@ import org.jetbrains.kotlin.test.TargetBackend
 import org.jetbrains.kotlin.test.builders.LanguageVersionSettingsBuilder
 import org.jetbrains.kotlin.test.util.JUnit4Assertions
 import org.jetbrains.kotlin.test.utils.TestDisposable
-import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
-import org.jetbrains.kotlin.utils.addToStdlib.runIf
-import org.junit.ComparisonFailure
+import org.jetbrains.kotlin.wasm.config.WasmConfigurationKeys
+import org.jetbrains.kotlin.wasm.test.handlers.WasiBoxRunner
+import org.jetbrains.kotlin.wasm.test.handlers.runWithCaughtExceptions
+import org.jetbrains.kotlin.wasm.test.tools.WasmVM
 import org.junit.jupiter.api.AfterEach
 import java.io.File
 import java.nio.file.Files
@@ -52,23 +53,21 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
 import java.util.stream.Collectors
 
-abstract class AbstractInvalidationTest(
+abstract class WasmAbstractInvalidationTest(
     private val targetBackend: TargetBackend,
     private val granularity: JsGenerationGranularity,
-    private val workingDirPath: String
+    private val workingDirPath: String,
 ) {
     companion object {
-        private val OUT_DIR_PATH = System.getProperty("kotlin.js.test.root.out.dir") ?: error("'kotlin.js.test.root.out.dir' is not set")
-        private val STDLIB_KLIB = File(System.getProperty("kotlin.js.stdlib.klib.path") ?: error("Please set stdlib path")).canonicalPath
-        private val KOTLIN_TEST_KLIB = File(System.getProperty("kotlin.js.kotlin.test.klib.path") ?: error("Please set kotlin.test path")).canonicalPath
+        private val OUT_DIR_PATH =
+            System.getProperty("kotlin.wasm.test.root.out.dir") ?: error("'kotlin.wasm.test.root.out.dir' is not set")
+        private val STDLIB_KLIB = File(System.getProperty("kotlin.wasm-wasi.stdlib.path") ?: error("Please set stdlib path")).canonicalPath
+        private val KOTLIN_TEST_KLIB =
+            File(System.getProperty("kotlin.wasm-wasi.kotlin.test.path") ?: error("Please set kotlin.test path")).canonicalPath
 
-        private const val BOX_FUNCTION_NAME = "box"
-        private const val STDLIB_MODULE_NAME = "kotlin-kotlin-stdlib"
-        private const val KOTLIN_TEST_MODULE_NAME = "kotlin-kotlin-test"
+        private const val BOX_FUNCTION_NAME = "wasi_box"
 
         private val TEST_FILE_IGNORE_PATTERN = Regex("^.*\\..+\\.\\w\\w$")
-
-        private const val SOURCE_MAPPING_URL_PREFIX = "//# sourceMappingURL="
     }
 
     open fun getModuleInfoFile(directory: File): File {
@@ -81,7 +80,7 @@ abstract class AbstractInvalidationTest(
 
     private val zipAccessor = ZipFileSystemCacheableAccessor(2)
 
-    private val rootDisposable = TestDisposable("${AbstractInvalidationTest::class.simpleName}.rootDisposable")
+    private val rootDisposable = TestDisposable("${WasmAbstractInvalidationTest::class.simpleName}.rootDisposable")
 
     protected val environment =
         KotlinCoreEnvironment.createForParallelTests(rootDisposable, CompilerConfiguration(), EnvironmentConfigFiles.JS_CONFIG_FILES)
@@ -128,11 +127,10 @@ abstract class AbstractInvalidationTest(
         val workingDir = testWorkingDir(projectInfo.name)
         val sourceDir = File(workingDir, "sources").also { it.invalidateDir() }
         val buildDir = File(workingDir, "build").also { it.invalidateDir() }
-        val jsDir = File(workingDir, "js").also { it.invalidateDir() }
 
         initializeWorkingDir(projectInfo, testDirectory, sourceDir, buildDir)
 
-        ProjectStepsExecutor(projectInfo, modulesInfos, testDirectory, sourceDir, buildDir, jsDir).execute()
+        ProjectStepsExecutor(projectInfo, modulesInfos, testDirectory, sourceDir, buildDir).execute()
     }
 
     private fun resolveModuleArtifact(moduleName: String, buildDir: File): File {
@@ -146,8 +144,7 @@ abstract class AbstractInvalidationTest(
         copy.put(JSConfigurationKeys.MODULE_KIND, moduleKind)
         copy.put(JSConfigurationKeys.PROPERTY_LAZY_INITIALIZATION, true)
         copy.put(JSConfigurationKeys.SOURCE_MAP, true)
-        copy.put(JSConfigurationKeys.USE_ES6_CLASSES, targetBackend == TargetBackend.JS_IR_ES6)
-        copy.put(JSConfigurationKeys.COMPILE_SUSPEND_AS_JS_GENERATOR, targetBackend == TargetBackend.JS_IR_ES6)
+        copy.put(WasmConfigurationKeys.WASM_TARGET, WasmTarget.WASI)
 
         copy.languageVersionSettings = with(LanguageVersionSettingsBuilder()) {
             language.forEach {
@@ -187,17 +184,13 @@ abstract class AbstractInvalidationTest(
         private val testDir: File,
         private val sourceDir: File,
         private val buildDir: File,
-        private val jsDir: File,
     ) {
         private inner class TestStepInfo(
             val moduleName: String,
             val modulePath: String,
             val friends: List<String>,
             val expectedFileStats: Map<String, Set<String>>,
-            val expectedDTS: ExpectedFile?,
         )
-
-        private inner class ExpectedFile(val name: String, val content: String)
 
         private fun setupTestStep(projStep: ProjectInfo.ProjectBuildStep, module: String): TestStepInfo {
             val projStepId = projStep.id
@@ -227,15 +220,11 @@ abstract class AbstractInvalidationTest(
                 buildKlib(configuration, module, moduleSourceDir, dependencies, friends, outputKlibFile)
             }
 
-            val dtsFile = moduleStep.expectedDTS.ifNotEmpty {
-                moduleTestDir.resolve(singleOrNull() ?: error("$module module may generate only one d.ts at step $projStepId"))
-            }
             return TestStepInfo(
                 module.safeModuleName,
                 outputKlibFile.canonicalPath,
                 friends.map { it.canonicalPath },
                 moduleStep.expectedFileStats,
-                dtsFile?.let { ExpectedFile(moduleStep.expectedDTS.single(), it.readText()) }
             )
         }
 
@@ -270,118 +259,7 @@ abstract class AbstractInvalidationTest(
             }
         }
 
-        private fun verifyJsExecutableProducerBuildModules(stepId: Int, gotRebuilt: List<String>, expectedRebuilt: List<String>) {
-            val got = gotRebuilt.filter { !it.startsWith(STDLIB_MODULE_NAME) && !it.startsWith(KOTLIN_TEST_MODULE_NAME) }
-            JUnit4Assertions.assertSameElements(got, expectedRebuilt) {
-                "Mismatched rebuilt modules at step $stepId"
-            }
-        }
-
-        private fun File.writeAsJsModule(jsCode: String, moduleName: String) {
-            writeText(ClassicJsBackendFacade.wrapWithModuleEmulationMarkers(jsCode, projectInfo.moduleKind, moduleName))
-        }
-
-        private fun prepareExternalJsFiles(): MutableList<String> {
-            return testDir.filesInDir.mapNotNullTo(mutableListOf(MODULE_EMULATION_FILE)) { file ->
-                file.takeIf { it.name.isAllowedJsFile() }?.readText()?.let { jsCode ->
-                    val externalModule = jsDir.resolve(file.name)
-                    externalModule.writeAsJsModule(jsCode, file.nameWithoutExtension)
-                    externalModule.canonicalPath
-                }
-            }
-        }
-
-        private fun verifyJsCode(stepId: Int, mainModuleName: String, jsFiles: List<String>) {
-            try {
-                V8IrJsTestChecker.checkWithTestFunctionArgs(
-                    files = jsFiles,
-                    testModuleName = "./$mainModuleName${projectInfo.moduleKind.extension}",
-                    testPackageName = null,
-                    testFunctionName = BOX_FUNCTION_NAME,
-                    testFunctionArgs = "$stepId",
-                    expectedResult = "OK",
-                    withModuleSystem = projectInfo.moduleKind in setOf(ModuleKind.COMMON_JS, ModuleKind.UMD, ModuleKind.AMD),
-                    entryModulePath = jsFiles.last()
-                )
-            } catch (e: ComparisonFailure) {
-                throw ComparisonFailure("Mismatched box out at step $stepId", e.expected, e.actual)
-            } catch (e: IllegalStateException) {
-                throw IllegalStateException("Something goes wrong (bad JS code?) at step $stepId\n${e.message}")
-            }
-        }
-
-        private fun verifyDTS(stepId: Int, testInfo: List<TestStepInfo>) {
-            for (info in testInfo) {
-                val moduleName = File(info.modulePath).nameWithoutExtension
-                val expectedDTS = info.expectedDTS ?: continue
-                val dtsFilePath = when (granularity) {
-                    JsGenerationGranularity.PER_FILE -> "$moduleName/${expectedDTS.name.substringBefore('.')}.export.d.ts"
-                    else -> "$moduleName.d.ts"
-                }
-
-                val dtsFile = jsDir.resolve(dtsFilePath)
-                JUnit4Assertions.assertTrue(dtsFile.exists()) {
-                    "Cannot find d.ts (${dtsFile.absolutePath}) file for module ${info.moduleName} at step $stepId"
-                }
-
-                val gotDTS = dtsFile.readText()
-                JUnit4Assertions.assertEquals(expectedDTS.content, gotDTS) {
-                    "Mismatched d.ts for module ${info.moduleName} at step $stepId"
-                }
-            }
-        }
-
-        private fun getPhaseConfig(stepId: Int): PhaseConfig {
-            if (DebugMode.fromSystemProperty("kotlin.js.debugMode") < DebugMode.SUPER_DEBUG) {
-                return PhaseConfig(jsPhases)
-            }
-
-            return PhaseConfig(
-                jsPhases,
-                dumpToDirectory = buildDir.resolve("irdump").resolve("step-$stepId").path,
-                toDumpStateAfter = jsPhases.toPhaseMap().values.toSet()
-            )
-        }
-
-        private fun writeJsCode(
-            stepId: Int,
-            mainModuleName: String,
-            jsOutput: CompilationOutputs,
-            dtsStrategy: TsCompilationStrategy
-        ): List<String> {
-            val compiledJsFiles = jsOutput.writeAll(
-                jsDir,
-                mainModuleName,
-                dtsStrategy,
-                mainModuleName,
-                projectInfo.moduleKind
-            ).filter {
-                it.extension == "js" || it.extension == "mjs"
-            }
-            for (jsCodeFile in compiledJsFiles) {
-                val sourceMappingUrlLine = jsCodeFile.readLines().singleOrNull { it.startsWith(SOURCE_MAPPING_URL_PREFIX) }
-
-                if (sourceMappingUrlLine != null) {
-                    JUnit4Assertions.assertEquals("$SOURCE_MAPPING_URL_PREFIX${jsCodeFile.name}.map", sourceMappingUrlLine) {
-                        "Mismatched source map url at step $stepId"
-                    }
-                }
-
-                jsCodeFile.writeAsJsModule(jsCodeFile.readText(), "./${jsCodeFile.name}")
-            }
-
-            return compiledJsFiles.mapTo(prepareExternalJsFiles()) { it.absolutePath }
-        }
-
         fun execute() {
-            if (granularity in projectInfo.ignoredGranularities) return
-
-            val mainArguments = runIf(projectInfo.callMain) { emptyList<String>() }
-            val dtsStrategy = when (granularity) {
-                JsGenerationGranularity.PER_FILE -> TsCompilationStrategy.EACH_FILE
-                else -> TsCompilationStrategy.MERGED
-            }
-
             for (projStep in projectInfo.steps) {
                 val testInfo = projStep.order.map { setupTestStep(projStep, it) }
 
@@ -392,18 +270,7 @@ abstract class AbstractInvalidationTest(
 
                 val configuration = createConfiguration(projStep.order.last(), projStep.language, projectInfo.moduleKind)
 
-                val dirtyData = when (granularity) {
-                    JsGenerationGranularity.PER_FILE -> projStep.dirtyJsFiles
-                    else -> projStep.dirtyJsModules
-                }
-
-                val icContext = JsICContext(
-                    mainArguments,
-                    granularity,
-                    getPhaseConfig(projStep.id),
-                    setOf(FqName(BOX_FUNCTION_NAME)),
-                )
-
+                val icContext = WasmICContext(allowIncompleteImplementations = false)
 
                 val cacheUpdater = CacheUpdater(
                     mainModule = mainModuleInfo.modulePath,
@@ -416,27 +283,52 @@ abstract class AbstractInvalidationTest(
 
                 val removedModulesInfo = (projectInfo.modules - projStep.order.toSet()).map { setupTestStep(projStep, it) }
 
-                val icCaches = cacheUpdater.actualizeCaches().map { it as ModuleArtifact }
+                val icCaches = cacheUpdater.actualizeCaches()
+                val fileFragments =
+                    icCaches.flatMap { it.fileArtifacts }.mapNotNull { it.loadJsIrFragments()?.mainFragment as? WasmCompiledFileFragment }
+
                 verifyCacheUpdateStats(projStep.id, cacheUpdater.getDirtyFileLastStats(), testInfo + removedModulesInfo)
 
-                val mainModuleName = icCaches.last().moduleExternalName
-                val jsExecutableProducer = JsExecutableProducer(
-                    mainModuleName = mainModuleName,
-                    moduleKind = configuration[JSConfigurationKeys.MODULE_KIND]!!,
-                    sourceMapsInfo = SourceMapsInfo.from(configuration),
-                    caches = icCaches,
-                    relativeRequirePath = true
+                val res = compileWasm(
+                    wasmCompiledFileFragments = fileFragments,
+                    moduleName = mainModuleInfo.moduleName,
+                    configuration = configuration,
+                    typeScriptFragment = null,
+                    baseFileName = mainModuleInfo.moduleName,
+                    emitNameSection = true,
+                    generateSourceMaps = false,
+                    generateWat = true
                 )
 
-                val (jsOutput, rebuiltModules) = jsExecutableProducer.buildExecutable(granularity, outJsProgram = true)
-                val writtenFiles = writeJsCode(projStep.id, mainModuleName, jsOutput, dtsStrategy)
+                writeCompilationResult(res, buildDir, mainModuleInfo.moduleName)
 
-                verifyJsExecutableProducerBuildModules(projStep.id, rebuiltModules, dirtyData)
-                verifyJsCode(projStep.id, mainModuleName, writtenFiles)
-                verifyDTS(projStep.id, testInfo)
+                val testWasi = """
+                    let boxTestPassed = false;
+                    try {
+                        let jsModule = await import('./${mainModuleInfo.moduleName}.mjs');
+                        boxTestPassed = jsModule.$BOX_FUNCTION_NAME(${projStep.id});
+                    } catch(e) {
+                        console.log('Failed with exception!');
+                        console.log(e);
+                    }
+        
+                    if (!boxTestPassed)
+                        process.exit(1);
+                    """.trimIndent()
+
+                val runnerFile = File(buildDir, "test.mjs")
+                runnerFile.writeText(testWasi)
+
+                WasmVM.NodeJs.run(
+                    "./test.mjs",
+                    emptyList(),
+                    workingDirectory = buildDir,
+                    useNewExceptionHandling = false,
+                )
             }
         }
     }
+
 
     private fun String.isAllowedKtFile() = endsWith(".kt") && !TEST_FILE_IGNORE_PATTERN.matches(this)
 

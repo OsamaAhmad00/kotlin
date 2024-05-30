@@ -11,21 +11,31 @@ import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.safeModuleName
 import org.jetbrains.kotlin.ir.backend.js.utils.serialization.deserializeJsIrProgramFragment
 import java.io.File
 
+abstract class SrcFileArtifactBase {
+    abstract fun loadJsIrFragments(): IrProgramFragments?
+    abstract fun isModified(): Boolean
+}
+
+abstract class ModuleArtifactBase {
+    abstract val fileArtifacts: List<SrcFileArtifactBase>
+}
+
 /**
  * This class encapsulates the JS AST for a specific kt file, which can be either dirty or not.
  * @param srcFilePath - Path to the kt file from the klib.
  * @param fragments - The JS AST itself. It is non-null if the kt file is dirty, and its IR has been lowered and transformed into JS AST.
  * @param astArtifact - Path to a serialized JS AST. It is typically used to obtain the JS AST if the kt file is unmodified.
  */
-class SrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgramFragments?, private val astArtifact: File? = null) {
-    fun loadJsIrFragments(): JsIrProgramFragments? {
+class SrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgramFragments?, private val astArtifact: File? = null):
+    SrcFileArtifactBase() {
+    override fun loadJsIrFragments(): JsIrProgramFragments? {
         if (fragments != null) {
             return fragments
         }
         return astArtifact?.ifExists { readBytes() }?.let { deserializeJsIrProgramFragment(it) }
     }
 
-    fun isModified() = fragments != null
+    override fun isModified() = fragments != null
 }
 
 /**
@@ -38,11 +48,11 @@ class SrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgra
  */
 class ModuleArtifact(
     moduleName: String,
-    val fileArtifacts: List<SrcFileArtifact>,
+    override val fileArtifacts: List<SrcFileArtifact>,
     val artifactsDir: File? = null,
     val forceRebuildJs: Boolean = false,
     externalModuleName: String? = null
-) {
+) : ModuleArtifactBase() {
     val moduleSafeName = moduleName.safeModuleName
     val moduleExternalName = externalModuleName ?: moduleSafeName
 

@@ -12,6 +12,8 @@ import org.jetbrains.kotlin.backend.wasm.compileToLoweredIr
 import org.jetbrains.kotlin.backend.wasm.compileWasm
 import org.jetbrains.kotlin.backend.wasm.dce.eliminateDeadDeclarations
 import org.jetbrains.kotlin.backend.wasm.ic.IrFactoryImplForWasmIC
+import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmModuleFragmentGenerator
+import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmModuleMetadataCache
 import org.jetbrains.kotlin.backend.wasm.wasmPhases
 import org.jetbrains.kotlin.ir.backend.js.MainModule
 import org.jetbrains.kotlin.ir.backend.js.ModulesStructure
@@ -110,14 +112,23 @@ class WasmBackendFacade(
         val generateWat = debugMode >= DebugMode.DEBUG || configuration.getBoolean(WasmConfigurationKeys.WASM_GENERATE_WAT)
         val baseFileName = "index"
 
+
+        val wasmModuleMetadataCache = WasmModuleMetadataCache(backendContext)
+        val codeGenerator = WasmModuleFragmentGenerator(
+            backendContext,
+            wasmModuleMetadataCache,
+            irFactory,
+            allowIncompleteImplementations = false,
+        )
+        val wasmCompiledFileFragments = allModules.flatMap { codeGenerator.generateModule(it) }
+
         val compilerResult = compileWasm(
-            allModules = allModules,
-            backendContext = backendContext,
+            wasmCompiledFileFragments = wasmCompiledFileFragments,
+            moduleName = allModules.last().descriptor.name.asString(),
+            configuration = configuration,
             typeScriptFragment = typeScriptFragment,
             baseFileName = baseFileName,
-            idSignatureRetriever = irFactory,
             emitNameSection = true,
-            allowIncompleteImplementations = false,
             generateWat = generateWat,
             generateSourceMaps = generateSourceMaps,
         )
@@ -127,14 +138,22 @@ class WasmBackendFacade(
 
         dumpDeclarationIrSizesIfNeed(System.getProperty("kotlin.wasm.dump.declaration.ir.size.to.file"), allModules, dceDumpNameCache)
 
+        val wasmModuleMetadataCacheDce = WasmModuleMetadataCache(backendContext)
+        val codeGeneratorDce = WasmModuleFragmentGenerator(
+            backendContext,
+            wasmModuleMetadataCacheDce,
+            irFactory,
+            allowIncompleteImplementations = true,
+        )
+        val wasmCompiledFileFragmentsDce = allModules.flatMap { codeGeneratorDce.generateModule(it) }
+
         val compilerResultWithDCE = compileWasm(
-            allModules = allModules,
-            backendContext = backendContext,
+            wasmCompiledFileFragments = wasmCompiledFileFragmentsDce,
+            moduleName = allModules.last().descriptor.name.asString(),
+            configuration = configuration,
             typeScriptFragment = typeScriptFragment,
             baseFileName = baseFileName,
-            idSignatureRetriever = irFactory,
             emitNameSection = true,
-            allowIncompleteImplementations = true,
             generateWat = generateWat,
             generateSourceMaps = generateSourceMaps,
         )

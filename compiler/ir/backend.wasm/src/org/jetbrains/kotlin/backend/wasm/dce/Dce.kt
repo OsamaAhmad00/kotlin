@@ -60,8 +60,6 @@ private fun buildRoots(modules: List<IrModuleFragment>, context: WasmBackendCont
     }
 
     add(context.irBuiltIns.throwableClass.owner)
-    add(context.mainCallsWrapperFunction)
-    add(context.fieldInitFunction)
     add(context.findUnitInstanceField())
     add(context.irBuiltIns.unitClass.owner.primaryConstructor!!)
     if (context.isWasmJsTarget) {
