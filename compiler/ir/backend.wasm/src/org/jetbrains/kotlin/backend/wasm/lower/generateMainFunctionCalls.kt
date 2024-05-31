@@ -33,14 +33,14 @@ class GenerateMainFunctionWrappers(private val backendContext: WasmBackendContex
         val generateContinuation = mainFunction.isLoweredSuspendFunction(backendContext)
 
         if (!generateArgv && !generateContinuation) {
-            backendContext.mainFunctionWrappers[mainFunction.file] = mainFunction
+            backendContext.getFileContext(mainFunction.file).mainFunctionWrapper = mainFunction
             return
         }
 
         val wrapper = backendContext.irFactory.stageController.restrictTo(mainFunction) {
             mainFunction.createMainFunctionWrapper(backendContext, generateArgv, generateContinuation)
         }
-        backendContext.mainFunctionWrappers[mainFunction.file] = wrapper
+        backendContext.getFileContext(mainFunction.file).mainFunctionWrapper = wrapper
     }
 }
 

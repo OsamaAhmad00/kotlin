@@ -44,7 +44,10 @@ class WasmCompiledFileFragment(
     val stringPoolSize: WasmSymbol<Int> = WasmSymbol(),
     val fieldInitializers: MutableList<Pair<IdSignature, List<WasmInstr>>> = mutableListOf(),
     val mainFunctionWrappers: MutableList<IdSignature> = mutableListOf(),
-    var testFun: IdSignature? = null
+    var testFun: IdSignature? = null,
+    val closureCallExports: MutableList<Pair<String, IdSignature>> = mutableListOf(),
+    val jsModuleAndQualifierReferences: Set<JsModuleAndQualifierReference> = mutableSetOf()
+
 ) : IrProgramFragment()
 
 class WasmCompiledModuleFragment(
@@ -317,6 +320,19 @@ class WasmCompiledModuleFragment(
             buildInstr(WasmOp.RETURN, serviceCodeLocation)
         }
 
+        //closureCallExports
+//        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
+//        wasmCompiledFileFragments.forEach { fragment ->
+//            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
+//                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
+//                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
+//                    WasmSymbol(wasmExportFunction)
+//                }
+//                //Rebind export function
+//                fragment.functions.unbound[exportFunction]!!.bind(symbol)
+//            }
+//        }
+
         //OPT
         //TODO(CREATE NEW STARTUNITTEST?)
         val startUnitTests = wasmCompiledFileFragments.firstNotNullOfOrNull { fragment ->
@@ -334,7 +350,27 @@ class WasmCompiledModuleFragment(
         }
 
         val exports = mutableListOf<WasmExport<*>>()
-        wasmCompiledFileFragments.flatMapTo(exports) { it.exports }
+
+        //TODO Better way to resolve clashed exports (especially for adapters)
+        val exportNames = mutableMapOf<String, Int>()
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.exports.forEach { export ->
+                if (export is WasmExport.Function) {
+                    val exportNumber = exportNames[export.name]
+                    if (exportNumber == null) {
+                        exports.add(export)
+                        exportNames[export.name] = 1
+                    } else {
+                        val renamedExport = WasmExport.Function("${export.name}_$exportNumber", export.field)
+                        exports.add(renamedExport)
+                        exportNames[export.name] = exportNumber + 1
+                    }
+                } else {
+                    exports.add(export)
+                }
+            }
+        }
+
         exports += WasmExport.Function("_initialize", masterInitFunction)
 
         val typeInfoSize = currentDataSectionAddress

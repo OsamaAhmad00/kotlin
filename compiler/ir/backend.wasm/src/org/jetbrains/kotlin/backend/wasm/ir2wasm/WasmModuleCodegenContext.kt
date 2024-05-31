@@ -150,6 +150,10 @@ class WasmFileCodegenContext(
     fun defineTestFun(testFun: IrFunctionSymbol) {
         wasmFileFragment.testFun = testFun.getReferenceKey()
     }
+
+    fun addClosureCallExport(exportSignature: String, exportFunction: IrFunctionSymbol) {
+        wasmFileFragment.closureCallExports.add(exportSignature to exportFunction.getReferenceKey())
+    }
 }
 
 class WasmModuleMetadataCache(private val backendContext: WasmBackendContext) {

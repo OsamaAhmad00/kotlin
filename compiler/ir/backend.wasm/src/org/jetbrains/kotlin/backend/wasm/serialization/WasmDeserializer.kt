@@ -578,7 +578,14 @@ class WasmDeserializer(inputStream: InputStream) {
         stringPoolSize = deserializeSymbol(::deserializeInt),
         fieldInitializers = deserializeList { deserializePair(::deserializeIdSignature, { deserializeList(::deserializeInstr) }) },
         mainFunctionWrappers = deserializeList(::deserializeIdSignature),
-        testFun = deserializeNullable(::deserializeIdSignature)
+        testFun = deserializeNullable(::deserializeIdSignature),
+        closureCallExports = deserializeList { deserializePair(::deserializeString, ::deserializeIdSignature) },
+        jsModuleAndQualifierReferences = deserializeSet(::deserializeJsModuleAndQualifierReference)
+    )
+
+    private fun deserializeJsModuleAndQualifierReference(): JsModuleAndQualifierReference = JsModuleAndQualifierReference(
+        module = deserializeNullable(::deserializeString),
+        qualifier = deserializeNullable(::deserializeString)
     )
 
     private fun <T : WasmNamedModuleField> deserializeNamedModuleField(deserializeFunc: (String) -> T) =

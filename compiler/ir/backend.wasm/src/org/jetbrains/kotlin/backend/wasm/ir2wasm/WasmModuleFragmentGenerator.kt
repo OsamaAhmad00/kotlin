@@ -60,9 +60,14 @@ internal fun compileIrFile(
         wasmFileCodegenContext.defineTestFun(testFun.symbol)
     }
 
-    val mainFunction = backendContext.mainFunctionWrappers[irFile]
-    if (mainFunction != null) {
-        wasmFileCodegenContext.addMainFunctionWrapper(mainFunction.symbol)
+    backendContext.fileContexts.values.forEach { fileContext ->
+        val mainFunctionWrapper = fileContext.mainFunctionWrapper
+        if (mainFunctionWrapper != null) {
+            wasmFileCodegenContext.addMainFunctionWrapper(mainFunctionWrapper.symbol)
+        }
+        fileContext.closureCallExports.forEach { (exportSignature, function) ->
+            wasmFileCodegenContext.addClosureCallExport(exportSignature, function.symbol)
+        }
     }
 
     return wasmFileFragment

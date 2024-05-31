@@ -68,14 +68,21 @@ class WasmBackendContext(
 
     override val mapping = JsMapping()
 
-    val closureCallExports = mutableMapOf<String, IrSimpleFunction>()
-    val kotlinClosureToJsConverters = mutableMapOf<String, IrSimpleFunction>()
-    val jsClosureCallers = mutableMapOf<String, IrSimpleFunction>()
-    val jsToKotlinClosures = mutableMapOf<String, IrSimpleFunction>()
-    val mainFunctionWrappers = mutableMapOf<IrFile, IrSimpleFunction>()
+    class CrossFileContext {
+        var mainFunctionWrapper: IrSimpleFunction? = null
+        val closureCallExports = mutableMapOf<String, IrSimpleFunction>()
+        val kotlinClosureToJsConverters = mutableMapOf<String, IrSimpleFunction>()
+        val jsClosureCallers = mutableMapOf<String, IrSimpleFunction>()
+        val jsToKotlinClosures = mutableMapOf<String, IrSimpleFunction>()
+        val jsModuleAndQualifierReferences = mutableSetOf<JsModuleAndQualifierReference>()
+    }
 
-    val jsModuleAndQualifierReferences =
-        mutableSetOf<JsModuleAndQualifierReference>()
+    val fileContexts = mutableMapOf<IrFile, CrossFileContext>()
+    fun getFileContext(irFile: IrFile): CrossFileContext = fileContexts.getOrPut(irFile, ::CrossFileContext)
+    inline fun applyIfDefined(irFile: IrFile, body: (CrossFileContext) -> Unit) = fileContexts[irFile]?.apply(body)
+
+    //TODO Move to CrossFileContext
+    override val testFunsPerFile = hashMapOf<IrFile, IrSimpleFunction>()
 
     override val coroutineSymbols =
         JsCommonCoroutineSymbols(symbolTable, module,this)
@@ -88,46 +95,6 @@ class WasmBackendContext(
     override val internalPackageFqn = FqName("kotlin.wasm")
 
     val kotlinWasmInternalPackageFqn = internalPackageFqn.child(Name.identifier("internal"))
-
-    private val internalPackageFragmentDescriptor = EmptyPackageFragmentDescriptor(builtIns.builtInsModule, kotlinWasmInternalPackageFqn)
-    // TODO: Merge with JS IR Backend context lazy file
-//    val internalPackageFragment by lazy {
-//        IrFileImpl(object : IrFileEntry {
-//            override val name = "<implicitDeclarations>"
-//            override val maxOffset = UNDEFINED_OFFSET
-//
-//            override fun getSourceRangeInfo(beginOffset: Int, endOffset: Int) =
-//                SourceRangeInfo(
-//                    "",
-//                    UNDEFINED_OFFSET,
-//                    UNDEFINED_LINE_NUMBER,
-//                    UNDEFINED_COLUMN_NUMBER,
-//                    UNDEFINED_OFFSET,
-//                    UNDEFINED_LINE_NUMBER,
-//                    UNDEFINED_COLUMN_NUMBER
-//                )
-//
-//            override fun getLineNumber(offset: Int) = UNDEFINED_LINE_NUMBER
-//            override fun getColumnNumber(offset: Int) = UNDEFINED_COLUMN_NUMBER
-//            override fun getLineAndColumnNumbers(offset: Int): LineAndColumn {
-//                return LineAndColumn(UNDEFINED_LINE_NUMBER, UNDEFINED_COLUMN_NUMBER)
-//            }
-//        }, internalPackageFragmentDescriptor, irModuleFragment).also {
-//            irModuleFragment.files += it
-//        }
-//    }
-
-//    fun createInitFunction(identifier: String): IrSimpleFunction = irFactory.buildFun {
-//        name = Name.identifier(identifier)
-//        returnType = irBuiltIns.unitType
-//    }.apply {
-//        body = irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET)
-//        internalPackageFragment.addChild(this)
-//    }
-
-//    val fieldInitFunction = createInitFunction("fieldInit")
-//    val mainCallsWrapperFunction = createInitFunction("mainCallsWrapper")
-    val fieldInitFunction: IrSimpleFunction by lazy { error("fieldInit") }
 
     override val sharedVariablesManager = WasmSharedVariablesManager(this)
 
@@ -165,34 +132,6 @@ class WasmBackendContext(
         get() = wasmSymbols.suiteFun
     override val testFun: IrSimpleFunctionSymbol?
         get() = wasmSymbols.testFun
-
-    private fun syntheticFile(name: String, module: IrModuleFragment): IrFile {
-        return IrFileImpl(object : IrFileEntry {
-            override val name = "<$name>"
-            override val maxOffset = UNDEFINED_OFFSET
-
-            override fun getSourceRangeInfo(beginOffset: Int, endOffset: Int) =
-                SourceRangeInfo(
-                    "",
-                    UNDEFINED_OFFSET,
-                    UNDEFINED_LINE_NUMBER,
-                    UNDEFINED_COLUMN_NUMBER,
-                    UNDEFINED_OFFSET,
-                    UNDEFINED_LINE_NUMBER,
-                    UNDEFINED_COLUMN_NUMBER
-                )
-
-            override fun getLineNumber(offset: Int) = UNDEFINED_LINE_NUMBER
-            override fun getColumnNumber(offset: Int) = UNDEFINED_COLUMN_NUMBER
-            override fun getLineAndColumnNumbers(offset: Int): LineAndColumn {
-                return LineAndColumn(UNDEFINED_LINE_NUMBER, UNDEFINED_COLUMN_NUMBER)
-            }
-        }, internalPackageFragmentDescriptor, module).also {
-            module.files += it
-        }
-    }
-
-    override val testFunsPerFile = hashMapOf<IrFile, IrSimpleFunction>()
 
     override val partialLinkageSupport = createPartialLinkageSupportForLowerings(
         configuration.partialLinkageConfig,

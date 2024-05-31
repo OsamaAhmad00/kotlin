@@ -618,7 +618,14 @@ class WasmSerializer(outputStream: OutputStream) {
             serialize(fieldInitializers) { serialize(it, ::serialize) { serialize(it, ::serialize) } }
             serialize(mainFunctionWrappers, ::serialize)
             serializeNullable(testFun, ::serialize)
+            serialize(closureCallExports) { serialize(it, ::serialize, ::serialize) }
+            serialize(jsModuleAndQualifierReferences, ::serialize)
         }
+
+    private fun serialize(obj: JsModuleAndQualifierReference) {
+        serializeNullable(obj.module, ::serialize)
+        serializeNullable(obj.qualifier, ::serialize)
+    }
 
     private fun serializeNamedModuleField(obj: WasmNamedModuleField, flags: List<Boolean> = listOf(), serializeFunc: () -> Unit) =
         serializeAsReference(obj) {

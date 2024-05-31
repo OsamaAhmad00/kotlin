@@ -192,25 +192,25 @@ fun compileWasm(
     if (configuration.get(WasmConfigurationKeys.WASM_TARGET) != WasmTarget.WASI) {
         val jsModuleImports = mutableSetOf<String>()
         val jsFuns = mutableSetOf<JsCodeSnippet>()
+        val jsModuleAndQualifierReferences = mutableSetOf<JsModuleAndQualifierReference>()
         wasmCompiledFileFragments.forEach { fragment ->
             jsModuleImports.addAll(fragment.jsModuleImports)
             jsFuns.addAll(fragment.jsFuns)
+            jsModuleAndQualifierReferences.addAll(fragment.jsModuleAndQualifierReferences)
         }
 
-        jsUninstantiatedWrapper = null
-//        generateAsyncJsWrapper(
-//            jsModuleImports,
-//            jsFuns,
-//            "./$baseFileName.wasm",
-//            backendContext.jsModuleAndQualifierReferences,
-//        )
-        jsWrapper = ""
-//        wasmCompiledModuleFragment.generateEsmExportsWrapper(
-//            jsModuleImports,
-//            "./$baseFileName.uninstantiated.mjs",
-//            backendContext.jsModuleAndQualifierReferences,
-//            linkedModule.exports,
-//        )
+        jsUninstantiatedWrapper = generateAsyncJsWrapper(
+            jsModuleImports,
+            jsFuns,
+            "./$baseFileName.wasm",
+            jsModuleAndQualifierReferences,
+        )
+        jsWrapper = wasmCompiledModuleFragment.generateEsmExportsWrapper(
+            jsModuleImports,
+            "./$baseFileName.uninstantiated.mjs",
+            jsModuleAndQualifierReferences,
+            linkedModule.exports,
+        )
     } else {
         jsUninstantiatedWrapper = null
         jsWrapper = wasmCompiledModuleFragment.generateAsyncWasiWrapper("./$baseFileName.wasm", linkedModule.exports)
