@@ -192,25 +192,7 @@ class WasmBackendContext(
         }
     }
 
-    private val testContainerFuns = mutableMapOf<IrModuleFragment, IrSimpleFunction>()
-
-    val testEntryPoints: Collection<IrSimpleFunction>
-        get() = testContainerFuns.values
-
-    override fun createTestContainerFun(container: IrDeclaration): IrSimpleFunction {
-        val irFile = container.file
-        val module = irFile.module
-        return testContainerFuns.getOrPut(module) {
-            val file = syntheticFile("tests", module)
-            irFactory.addFunction(file) {
-                name = Name.identifier("testContainer")
-                returnType = irBuiltIns.unitType
-                origin = JsIrBuilder.SYNTHESIZED_DECLARATION
-            }.apply {
-                body = irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET, emptyList())
-            }
-        }
-    }
+    override val testFunsPerFile = hashMapOf<IrFile, IrSimpleFunction>()
 
     override val partialLinkageSupport = createPartialLinkageSupportForLowerings(
         configuration.partialLinkageConfig,

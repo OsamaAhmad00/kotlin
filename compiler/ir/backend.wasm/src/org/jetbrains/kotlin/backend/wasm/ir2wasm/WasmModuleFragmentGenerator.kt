@@ -55,6 +55,11 @@ internal fun compileIrFile(
         irDeclaration.acceptVoid(generator)
     }
 
+    val testFun = backendContext.testFunsPerFile[irFile]
+    if (testFun != null) {
+        wasmFileCodegenContext.defineTestFun(testFun.symbol)
+    }
+
     val mainFunction = backendContext.mainFunctionWrappers[irFile]
     if (mainFunction != null) {
         wasmFileCodegenContext.addMainFunctionWrapper(mainFunction.symbol)

@@ -413,6 +413,14 @@ class WasmSerializer(outputStream: OutputStream) {
             }
         }
 
+    private fun <T> serializeNullable(value: T?, serializeFunc: (T) -> Unit) {
+        if (value != null) {
+            withId(1U) { serializeFunc(value) }
+        } else {
+            withId(0U) { }
+        }
+    }
+
     private fun serialize(idSignature: IdSignature) =
         when (idSignature) {
             is IdSignature.AccessorSignature -> withId(0U) { serialize(idSignature) }
@@ -609,6 +617,7 @@ class WasmSerializer(outputStream: OutputStream) {
             serialize(stringPoolSize, ::serialize)
             serialize(fieldInitializers) { serialize(it, ::serialize) { serialize(it, ::serialize) } }
             serialize(mainFunctionWrappers, ::serialize)
+            serializeNullable(testFun, ::serialize)
         }
 
     private fun serializeNamedModuleField(obj: WasmNamedModuleField, flags: List<Boolean> = listOf(), serializeFunc: () -> Unit) =

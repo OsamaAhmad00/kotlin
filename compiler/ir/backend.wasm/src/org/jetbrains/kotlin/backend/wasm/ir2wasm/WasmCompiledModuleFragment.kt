@@ -43,7 +43,8 @@ class WasmCompiledFileFragment(
     val scratchMemAddr: WasmSymbol<Int> = WasmSymbol(),
     val stringPoolSize: WasmSymbol<Int> = WasmSymbol(),
     val fieldInitializers: MutableList<Pair<IdSignature, List<WasmInstr>>> = mutableListOf(),
-    val mainFunctionWrappers: MutableList<IdSignature> = mutableListOf()
+    val mainFunctionWrappers: MutableList<IdSignature> = mutableListOf(),
+    var testFun: IdSignature? = null
 ) : IrProgramFragment()
 
 class WasmCompiledModuleFragment(
@@ -284,6 +285,8 @@ class WasmCompiledModuleFragment(
             }
         }
 
+        val serviceCodeLocation = SourceLocation.NoLocation("Generated service code")
+
         val parameterlessNoReturnFunctionType = WasmFunctionType(emptyList(), emptyList())
 
         val fieldInitializerFunction = WasmFunction.Defined("_fieldInitialize", WasmSymbol(parameterlessNoReturnFunctionType))
@@ -296,7 +299,7 @@ class WasmCompiledModuleFragment(
                         expression.addAll(0, initializer)
                     } else {
                         expression.addAll(initializer)
-                        buildSetGlobal(fieldSymbol, SourceLocation.NoLocation("Generated service code"))
+                        buildSetGlobal(fieldSymbol, serviceCodeLocation)
                     }
                 }
             }
@@ -304,14 +307,30 @@ class WasmCompiledModuleFragment(
 
         val masterInitFunction = WasmFunction.Defined("_initialize", WasmSymbol(parameterlessNoReturnFunctionType))
         with(WasmIrExpressionBuilder(masterInitFunction.instructions)) {
-            buildCall(WasmSymbol(fieldInitializerFunction), SourceLocation.NoLocation("Generated service code"))
+            buildCall(WasmSymbol(fieldInitializerFunction), serviceCodeLocation)
             wasmCompiledFileFragments.forEach { fragment ->
                 fragment.mainFunctionWrappers.forEach { signature ->
                     val wrapperFunction = fragment.functions.defined[signature] ?: error("Cannot find symbol for main wrapper")
-                    buildCall(WasmSymbol(wrapperFunction), SourceLocation.NoLocation("Generated service code"))
+                    buildCall(WasmSymbol(wrapperFunction), serviceCodeLocation)
                 }
             }
-            buildInstr(WasmOp.RETURN, SourceLocation.NoLocation("Generated service code"))
+            buildInstr(WasmOp.RETURN, serviceCodeLocation)
+        }
+
+        //OPT
+        //TODO(CREATE NEW STARTUNITTEST?)
+        val startUnitTests = wasmCompiledFileFragments.firstNotNullOfOrNull { fragment ->
+            fragment.functions.defined.values.find { it.name == "kotlin.test.startUnitTests" }
+        }
+        check(startUnitTests is WasmFunction.Defined)
+        with(WasmIrExpressionBuilder(startUnitTests.instructions)) {
+            wasmCompiledFileFragments.forEach { fragment ->
+                val signature = fragment.testFun
+                if (signature != null) {
+                    val testRunner = fragment.functions.defined[signature] ?: error("Cannot find symbol for test runner")
+                    buildCall(WasmSymbol(testRunner), serviceCodeLocation)
+                }
+            }
         }
 
         val exports = mutableListOf<WasmExport<*>>()

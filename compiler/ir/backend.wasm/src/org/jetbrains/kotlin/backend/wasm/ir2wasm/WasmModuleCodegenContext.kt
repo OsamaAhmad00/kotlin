@@ -146,6 +146,10 @@ class WasmFileCodegenContext(
     fun addMainFunctionWrapper(mainFunctionWrapper: IrFunctionSymbol) {
         wasmFileFragment.mainFunctionWrappers.add(mainFunctionWrapper.getReferenceKey())
     }
+
+    fun defineTestFun(testFun: IrFunctionSymbol) {
+        wasmFileFragment.testFun = testFun.getReferenceKey()
+    }
 }
 
 class WasmModuleMetadataCache(private val backendContext: WasmBackendContext) {

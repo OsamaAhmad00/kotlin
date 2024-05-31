@@ -62,6 +62,10 @@ private fun buildRoots(modules: List<IrModuleFragment>, context: WasmBackendCont
     add(context.irBuiltIns.throwableClass.owner)
     add(context.findUnitInstanceField())
     add(context.irBuiltIns.unitClass.owner.primaryConstructor!!)
+
+    addAll(context.testFunsPerFile.values)
+    addAll(context.mainFunctionWrappers.values)
+
     if (context.isWasmJsTarget) {
         add(context.wasmSymbols.jsRelatedSymbols.throwJsException.owner)
     }

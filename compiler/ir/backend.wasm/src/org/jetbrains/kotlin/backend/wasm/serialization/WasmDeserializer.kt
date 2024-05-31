@@ -378,6 +378,14 @@ class WasmDeserializer(inputStream: InputStream) {
             }
         }
 
+    private fun <T> deserializeNullable(deserializeFunc: () -> T): T? = withId {
+        when (it) {
+            0 -> null
+            1 -> deserializeFunc()
+            else -> idError()
+        }
+    }
+
     private fun deserializeIdSignature(): IdSignature =
         withId { id ->
             when (id) {
@@ -569,7 +577,8 @@ class WasmDeserializer(inputStream: InputStream) {
         scratchMemAddr = deserializeSymbol(::deserializeInt),
         stringPoolSize = deserializeSymbol(::deserializeInt),
         fieldInitializers = deserializeList { deserializePair(::deserializeIdSignature, { deserializeList(::deserializeInstr) }) },
-        mainFunctionWrappers = deserializeList(::deserializeIdSignature)
+        mainFunctionWrappers = deserializeList(::deserializeIdSignature),
+        testFun = deserializeNullable(::deserializeIdSignature)
     )
 
     private fun <T : WasmNamedModuleField> deserializeNamedModuleField(deserializeFunc: (String) -> T) =
