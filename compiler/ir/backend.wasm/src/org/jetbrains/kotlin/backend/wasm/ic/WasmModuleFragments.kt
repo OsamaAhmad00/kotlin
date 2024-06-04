@@ -25,5 +25,5 @@ class WasmIrProgramFragments(
 
 class WasmIrModule(
     override val moduleName: String,
-    override val fragments: List<JsIrProgramFragment>,
+    override val fragments: List<WasmCompiledFileFragment>,
 ) : IrModule()

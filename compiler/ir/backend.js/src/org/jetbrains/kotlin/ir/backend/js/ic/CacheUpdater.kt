@@ -12,8 +12,6 @@ import org.jetbrains.kotlin.backend.common.toLogger
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.backend.js.*
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.JsGenerationGranularity
-import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.JsIrProgramFragments
-import org.jetbrains.kotlin.ir.backend.js.utils.serialization.serializeTo
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
@@ -44,22 +42,12 @@ abstract class IrProgramFragments {
     abstract fun serialize(stream: OutputStream)
 }
 
-fun interface JsIrCompilerICInterface {
+fun interface IrCompilerICInterface {
     /**
      * It is expected that the method implementation runs a lowering pipeline
      * and produces a list of generators capable of generating JS AST fragments.
      */
     fun compile(allModules: Collection<IrModuleFragment>, dirtyFiles: Collection<IrFile>): List<() -> IrProgramFragments>
-}
-
-fun interface JsIrCompilerICInterfaceFactory {
-    /**
-     * It is expected that the method implementation creates a backend context and initializes all builtins and intrinsics.
-     */
-    fun createCompilerForIC(
-        mainModule: IrModuleFragment,
-        configuration: CompilerConfiguration
-    ): JsIrCompilerICInterface
 }
 
 enum class DirtyFileState(val str: String) {
@@ -75,8 +63,14 @@ enum class DirtyFileState(val str: String) {
 
 interface PlatformDependentICContext {
     fun createIrFactory(): IrFactory
-    fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): JsIrCompilerICInterface
+
+    /**
+     * It is expected that the method implementation creates a backend context and initializes all builtins and intrinsics.
+     */
+    fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface
+
     fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File? = null): SrcFileArtifactBase
+
     fun createModuleArtifact(
         moduleName: String,
         fileArtifacts: List<SrcFileArtifactBase>,
@@ -90,7 +84,7 @@ interface PlatformDependentICContext {
  * This class is the entry point for the incremental compilation routine.
  * The most interesting params:
  * @param cacheDir - the directory where the incremental cache updater will store its caches. [CacheUpdater] maintains the directory fully.
- * @param compilerInterfaceFactory - is a factory that creates an instance of the compiler used for building dirty files.
+ * @param icContext - a context used to create an instance of the compiler used for building dirty files.
  *
  * The main public methods are:
  *  [actualizeCaches] - performs the entire incremental compilation routine;
@@ -678,7 +672,7 @@ class CacheUpdater(
     }
 
     private fun compileDirtyFiles(
-        compilerForIC: JsIrCompilerICInterface,
+        compilerForIC: IrCompilerICInterface,
         loadedIr: LoadedJsIr,
         dirtyFiles: Map<KotlinLibraryFile, Set<KotlinSourceFile>>
     ): MutableList<Triple<KotlinLibraryFile, KotlinSourceFile, () -> IrProgramFragments>> =
@@ -708,7 +702,7 @@ class CacheUpdater(
         val incrementalCacheArtifacts: Map<KotlinLibraryFile, IncrementalCacheArtifact>,
         val loadedIr: LoadedJsIr,
         val dirtyFiles: Map<KotlinLibraryFile, Set<KotlinSourceFile>>,
-        val irCompiler: JsIrCompilerICInterface
+        val irCompiler: IrCompilerICInterface
     )
 
     private fun loadIrForDirtyFilesAndInitCompiler(): IrForDirtyFilesAndCompiler {
@@ -817,7 +811,7 @@ class CacheUpdater(
      * This method performs the following routine:
      *  - Estimates dirty files that must be relowered;
      *  - Creates a compiler instance by calling [compilerInterfaceFactory];
-     *  - Runs the compiler (lowering pipeline) for the dirty files (see [JsIrCompilerICInterface]);
+     *  - Runs the compiler (lowering pipeline) for the dirty files (see [IrCompilerICInterface]);
      *  - Transforms lowered IR to JS AST fragments [IrProgramFragments];
      *  - Saves the cache data on the disk.
      *

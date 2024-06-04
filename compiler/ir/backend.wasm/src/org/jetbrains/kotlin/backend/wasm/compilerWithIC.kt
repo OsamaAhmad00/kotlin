@@ -14,7 +14,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
 import org.jetbrains.kotlin.ir.backend.js.ic.IrProgramFragments
-import org.jetbrains.kotlin.ir.backend.js.ic.JsIrCompilerICInterface
+import org.jetbrains.kotlin.ir.backend.js.ic.IrCompilerICInterface
 import org.jetbrains.kotlin.ir.declarations.IdSignatureRetriever
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
@@ -26,7 +26,7 @@ class WasmCompilerWithIC(
     mainModule: IrModuleFragment,
     configuration: CompilerConfiguration,
     private val allowIncompleteImplementations: Boolean,
-) : JsIrCompilerICInterface {
+) : IrCompilerICInterface {
     val context: WasmBackendContext
     private val idSignatureRetriever: IdSignatureRetriever
     private val wasmModuleMetadataCache: WasmModuleMetadataCache

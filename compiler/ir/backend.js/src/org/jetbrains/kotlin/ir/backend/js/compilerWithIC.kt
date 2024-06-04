@@ -33,7 +33,7 @@ class JsICContext(
     override fun createIrFactory(): IrFactory =
         IrFactoryImplForJsIC(WholeWorldStageController())
 
-    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): JsIrCompilerICInterface =
+    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
         JsIrCompilerWithIC(mainModule, mainArguments, configuration, granularity, phaseConfig, exportedDeclarations)
 
     override fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File?): SrcFileArtifactBase =
@@ -57,7 +57,7 @@ class JsIrCompilerWithIC(
     granularity: JsGenerationGranularity,
     private val phaseConfig: PhaseConfig,
     exportedDeclarations: Set<FqName> = emptySet(),
-) : JsIrCompilerICInterface {
+) : IrCompilerICInterface {
     private val context: JsIrBackendContext
 
     init {
