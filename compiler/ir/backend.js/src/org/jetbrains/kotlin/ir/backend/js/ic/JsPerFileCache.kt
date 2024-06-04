@@ -31,7 +31,7 @@ class JsPerFileCache(private val moduleArtifacts: List<ModuleArtifact>) : JsMult
         private fun JsIrProgramFragment.getExportFragmentExternalName(moduleArtifact: ModuleArtifact) =
             moduleFragmentToExternalName.getExternalNameForExporterFile(name, packageFqn, moduleArtifact.moduleExternalName)
 
-        private fun SrcFileArtifact.loadJsIrModuleHeaders(moduleArtifact: ModuleArtifact) = with(loadJsIrFragments()!!) {
+        private fun SrcFileArtifact.loadJsIrModuleHeaders(moduleArtifact: ModuleArtifact) = with(loadIrFragments()!!) {
             LoadedJsIrModuleHeaders(
                 mainFragment.mainFunctionTag,
                 mainFragment.run {
@@ -86,7 +86,7 @@ class JsPerFileCache(private val moduleArtifacts: List<ModuleArtifact>) : JsMult
             protected open val filePrefix by lazy(LazyThreadSafetyMode.NONE) { fileArtifact.srcFilePath.run { "${substringAfterLast('/')}.${cityHash64()}" } }
 
             override fun loadJsIrModule(): JsIrModule {
-                val fragments = fileArtifact.loadJsIrFragments()!!.also {
+                val fragments = fileArtifact.loadIrFragments()!!.also {
                     it.mainFragment.testEnvironment = null
                 }
 

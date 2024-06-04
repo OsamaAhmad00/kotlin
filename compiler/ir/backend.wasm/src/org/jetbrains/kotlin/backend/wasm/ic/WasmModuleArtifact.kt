@@ -20,7 +20,7 @@ class WasmSrcFileArtifact(
     private val skipSourceLocations: Boolean
 ):
     SrcFileArtifactBase() {
-    override fun loadJsIrFragments(): WasmIrProgramFragments? {
+    override fun loadIrFragments(): WasmIrProgramFragments? {
         if (fragments != null) {
             return fragments
         }
@@ -39,4 +39,12 @@ class WasmModuleArtifact(
     externalModuleName: String? = null
 ) : ModuleArtifactBase() {
     val moduleSafeName = moduleName.safeModuleName
+
+    fun loadWasmIrModule(): WasmIrModule {
+        val fragments = fileArtifacts.sortedBy { it.srcFilePath }.flatMap {
+            val fragments = it.loadIrFragments()
+            listOfNotNull(fragments?.mainFragment, fragments?.exportFragment)
+        }
+        return WasmIrModule(moduleSafeName, fragments)
+    }
 }

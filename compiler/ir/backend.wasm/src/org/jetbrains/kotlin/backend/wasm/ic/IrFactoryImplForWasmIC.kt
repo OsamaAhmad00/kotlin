@@ -23,7 +23,7 @@ class WasmICContext(
     override fun createIrFactory(): IrFactory =
         IrFactoryImplForWasmIC(WholeWorldStageController())
 
-    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): JsIrCompilerICInterface =
+    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
         WasmCompilerWithIC(mainModule, configuration, allowIncompleteImplementations)
 
     override fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File?): SrcFileArtifactBase =
