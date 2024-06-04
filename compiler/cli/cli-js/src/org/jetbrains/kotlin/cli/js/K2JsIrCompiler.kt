@@ -358,7 +358,7 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
                 val wasmArtifacts = icCaches.artifacts
                     .filterIsInstance<WasmModuleArtifact>()
                     .flatMap { it.fileArtifacts }
-                    .mapNotNull { it.loadJsIrFragments()?.mainFragment }
+                    .mapNotNull { it.loadIrFragments()?.mainFragment }
 
                 performanceManager?.notifyGenerationFinished()
 

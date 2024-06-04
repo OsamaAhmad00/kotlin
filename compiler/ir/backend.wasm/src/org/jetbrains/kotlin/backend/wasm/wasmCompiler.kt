@@ -136,7 +136,7 @@ fun lowerPreservingTags(
         }
     }
 
-    controller.currentStage = org.jetbrains.kotlin.ir.backend.js.loweringList.size + 1
+    controller.currentStage = loweringList.size + 1
 }
 
 fun compileWasm(
