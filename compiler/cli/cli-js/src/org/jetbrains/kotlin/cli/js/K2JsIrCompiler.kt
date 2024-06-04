@@ -257,7 +257,6 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
         configurationJs.put(JSConfigurationKeys.GENERATE_INLINE_ANONYMOUS_FUNCTIONS, arguments.irGenerateInlineAnonymousFunctions)
         configurationJs.put(JSConfigurationKeys.USE_ES6_CLASSES, arguments.useEsClasses ?: isES2015)
         configurationJs.put(JSConfigurationKeys.COMPILE_SUSPEND_AS_JS_GENERATOR, arguments.useEsGenerators ?: isES2015)
-        configurationJs.put(WasmConfigurationKeys.WASM_TARGET, WasmTarget.WASI)
 
         arguments.platformArgumentsProviderJsExpression?.let {
             configurationJs.put(JSConfigurationKeys.DEFINE_PLATFORM_MAIN_FUNCTION_ARGUMENTS, it)
