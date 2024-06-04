@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.ir.backend.js.utils.serialization.deserializeJsIrPro
 import java.io.File
 
 abstract class SrcFileArtifactBase {
-    abstract fun loadJsIrFragments(): IrProgramFragments?
+    abstract fun loadIrFragments(): IrProgramFragments?
     abstract fun isModified(): Boolean
 }
 
@@ -28,7 +28,7 @@ abstract class ModuleArtifactBase {
  */
 class SrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgramFragments?, private val astArtifact: File? = null):
     SrcFileArtifactBase() {
-    override fun loadJsIrFragments(): JsIrProgramFragments? {
+    override fun loadIrFragments(): JsIrProgramFragments? {
         if (fragments != null) {
             return fragments
         }
@@ -58,7 +58,7 @@ class ModuleArtifact(
 
     fun loadJsIrModule(reexportedInModuleWithName: String? = null): JsIrModule {
         val fragments = fileArtifacts.sortedBy { it.srcFilePath }.flatMap {
-            val fragments = it.loadJsIrFragments()
+            val fragments = it.loadIrFragments()
             listOfNotNull(fragments?.mainFragment, fragments?.exportFragment)
         }
         return JsIrModule(moduleSafeName, moduleExternalName, fragments, reexportedInModuleWithName)
