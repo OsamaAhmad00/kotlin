@@ -279,7 +279,7 @@ abstract class WasmAbstractInvalidationTest(
 
                 val icCaches = cacheUpdater.actualizeCaches()
                 val fileFragments =
-                    icCaches.flatMap { it.fileArtifacts }.mapNotNull { it.loadJsIrFragments()?.mainFragment as? WasmCompiledFileFragment }
+                    icCaches.flatMap { it.fileArtifacts }.mapNotNull { it.loadIrFragments()?.mainFragment as? WasmCompiledFileFragment }
 
                 verifyCacheUpdateStats(projStep.id, cacheUpdater.getDirtyFileLastStats(), testInfo + removedModulesInfo)
 
