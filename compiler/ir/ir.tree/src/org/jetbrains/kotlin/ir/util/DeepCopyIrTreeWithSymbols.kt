@@ -153,6 +153,9 @@ open class DeepCopyIrTreeWithSymbols(
             hasEnumEntries = declaration.hasEnumEntries,
             source = declaration.source,
         ).apply {
+            // FIXME change this
+            symbol.privateSignature = declaration.symbol.privateSignature
+
             transformAnnotations(declaration)
             copyTypeParametersFrom(declaration)
             superTypes = declaration.superTypes.memoryOptimizedMap {
@@ -186,6 +189,9 @@ open class DeepCopyIrTreeWithSymbols(
             containerSource = declaration.containerSource,
             isFakeOverride = declaration.isFakeOverride,
         ).apply {
+            // FIXME change this
+            symbol.privateSignature = declaration.symbol.privateSignature
+
             overriddenSymbols = declaration.overriddenSymbols.memoryOptimizedMap {
                 symbolRemapper.getReferencedFunction(it) as IrSimpleFunctionSymbol
             }
