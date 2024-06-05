@@ -338,7 +338,10 @@ class IrDeclarationDeserializer(
                     isExpect = flags.isExpect,
                     isFun = flags.isFun,
                     hasEnumEntries = flags.hasEnumEntries,
-                )
+                ).apply {
+                    // FIXME change this
+                    if (symbol.signature == null && symbol.privateSignature == null) symbol.privateSignature = signature
+                }
             }.usingParent {
                 typeParameters = deserializeTypeParameters(proto.typeParameterList, true)
 
@@ -585,6 +588,9 @@ class IrDeclarationDeserializer(
                     isFakeOverride = flags.isFakeOverride,
                 )
             }.apply {
+                // FIXME change this
+                if (symbol.signature == null && symbol.privateSignature == null) symbol.privateSignature = idSig
+
                 overriddenSymbols =
                     proto.overriddenList.memoryOptimizedMap { deserializeIrSymbol(it).checkSymbolType(FUNCTION_SYMBOL) }
             }
