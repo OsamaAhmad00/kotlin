@@ -47,19 +47,9 @@ class IrFactoryImplForWasmIC(stageController: StageController) : AbstractIrFacto
         return this
     }
 
-    override fun declarationSignature(declaration: IrDeclaration): IdSignature? {
-        when (declaration) {
-            is IrFunction, is IrProperty, is IrClass, is IrField -> Unit
-            else -> return null
-        }
-
-        val signature = declarationToSignature[declaration]
+    override fun declarationSignature(declaration: IrDeclaration): IdSignature? =
+        declarationToSignature[declaration]
             ?: declaration.symbol.signature
             ?: declaration.symbol.privateSignature
-        if (signature != null) return signature
-
-        val unknownDeclaration = IdSignature.ScopeLocalDeclaration(declaration.dump().hashCode(), "UNKNOWN")
-        declarationToSignature[declaration] = unknownDeclaration
-        return unknownDeclaration
-    }
+            ?: error("Can't retrieve a signature for $declaration")
 }
