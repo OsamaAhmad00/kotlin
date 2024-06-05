@@ -155,6 +155,7 @@ open class DeepCopyIrTreeWithSymbols(
         ).apply {
             // FIXME change this
             symbol.privateSignature = declaration.symbol.privateSignature
+            if (symbol.privateSignature == null) symbol.privateSignature = declaration.symbol.signature
 
             transformAnnotations(declaration)
             copyTypeParametersFrom(declaration)
@@ -191,6 +192,7 @@ open class DeepCopyIrTreeWithSymbols(
         ).apply {
             // FIXME change this
             symbol.privateSignature = declaration.symbol.privateSignature
+            if (symbol.privateSignature == null) symbol.privateSignature = declaration.symbol.signature
 
             overriddenSymbols = declaration.overriddenSymbols.memoryOptimizedMap {
                 symbolRemapper.getReferencedFunction(it) as IrSimpleFunctionSymbol
