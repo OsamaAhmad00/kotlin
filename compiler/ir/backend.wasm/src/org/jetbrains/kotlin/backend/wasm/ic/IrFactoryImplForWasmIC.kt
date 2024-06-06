@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.backend.wasm.ic
 
 import org.jetbrains.kotlin.backend.wasm.WasmCompilerWithIC
+import org.jetbrains.kotlin.backend.wasm.WasmCompilerWithICForTesting
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
 import org.jetbrains.kotlin.ir.backend.js.ic.*
@@ -16,7 +17,7 @@ import org.jetbrains.kotlin.ir.util.dump
 import java.io.File
 import java.util.*
 
-class WasmICContext(private val allowIncompleteImplementations: Boolean) : PlatformDependentICContext {
+open class WasmICContext(protected val allowIncompleteImplementations: Boolean) : PlatformDependentICContext {
     override fun createIrFactory(): IrFactory =
         IrFactoryImplForWasmIC(WholeWorldStageController())
 
@@ -34,6 +35,11 @@ class WasmICContext(private val allowIncompleteImplementations: Boolean) : Platf
         externalModuleName: String?,
     ): ModuleArtifactBase =
         WasmModuleArtifact(moduleName, fileArtifacts.map { it as WasmSrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
+}
+
+class WasmICContextForTesting(allowIncompleteImplementations: Boolean) : WasmICContext(allowIncompleteImplementations) {
+    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
+        WasmCompilerWithICForTesting(mainModule, configuration, allowIncompleteImplementations)
 }
 
 class IrFactoryImplForWasmIC(stageController: StageController) : AbstractIrFactoryImplForIC(stageController) {
