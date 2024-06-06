@@ -154,8 +154,9 @@ open class DeepCopyIrTreeWithSymbols(
             source = declaration.source,
         ).apply {
             // FIXME change this
-            symbol.privateSignature = declaration.symbol.privateSignature
-            if (symbol.privateSignature == null) symbol.privateSignature = declaration.symbol.signature
+            if (symbol.privateSignature == null) {
+                symbol.privateSignature = IdSignature.ScopeLocalDeclaration(declaration.dump().hashCode(), "UNKNOWN")
+            }
 
             transformAnnotations(declaration)
             copyTypeParametersFrom(declaration)
@@ -190,9 +191,9 @@ open class DeepCopyIrTreeWithSymbols(
             containerSource = declaration.containerSource,
             isFakeOverride = declaration.isFakeOverride,
         ).apply {
-            // FIXME change this
-            symbol.privateSignature = declaration.symbol.privateSignature
-            if (symbol.privateSignature == null) symbol.privateSignature = declaration.symbol.signature
+            if (symbol.privateSignature == null) {
+                symbol.privateSignature = IdSignature.ScopeLocalDeclaration(declaration.dump().hashCode(), "UNKNOWN")
+            }
 
             overriddenSymbols = declaration.overriddenSymbols.memoryOptimizedMap {
                 symbolRemapper.getReferencedFunction(it) as IrSimpleFunctionSymbol
