@@ -112,7 +112,7 @@ internal class ExternalTool(val path: String) {
 
         val exitValue = process.waitFor()
         if (exitValue != 0) {
-            fail("Command \"$commandString\" terminated with exit code $exitValue")
+            fail("Command \"$commandString\" terminated with exit code $exitValue with the following stdout:\n$stdout")
         }
 
         return stdout.toString()
