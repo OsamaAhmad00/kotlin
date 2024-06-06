@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.backend.wasm.ic
 
 import org.jetbrains.kotlin.backend.wasm.WasmCompilerWithIC
+import org.jetbrains.kotlin.backend.wasm.WasmCompilerWithICForTesting
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
 import org.jetbrains.kotlin.ir.backend.js.ic.*
@@ -14,10 +15,10 @@ import org.jetbrains.kotlin.ir.util.IdSignature
 import java.io.File
 import java.util.*
 
-class WasmICContext(
-    private val allowIncompleteImplementations: Boolean,
-    private val skipLocalNames: Boolean = false,
-    private val skipSourceLocations: Boolean = false,
+open class WasmICContext(
+    protected val allowIncompleteImplementations: Boolean,
+    protected val skipLocalNames: Boolean = false,
+    protected val skipSourceLocations: Boolean = false,
 ) : PlatformDependentICContext {
     override fun createIrFactory(): IrFactory =
         IrFactoryImplForWasmIC(WholeWorldStageController())
@@ -36,6 +37,15 @@ class WasmICContext(
         externalModuleName: String?,
     ): ModuleArtifact =
         WasmModuleArtifact(moduleName, fileArtifacts.map { it as WasmSrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
+}
+
+class WasmICContextForTesting(
+    allowIncompleteImplementations: Boolean,
+    skipLocalNames: Boolean = false,
+    skipSourceLocations: Boolean = false,
+) : WasmICContext(allowIncompleteImplementations, skipLocalNames, skipSourceLocations) {
+    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
+        WasmCompilerWithICForTesting(mainModule, configuration, allowIncompleteImplementations)
 }
 
 class IrFactoryImplForWasmIC(stageController: StageController) : IrFactory(stageController), IdSignatureRetriever {

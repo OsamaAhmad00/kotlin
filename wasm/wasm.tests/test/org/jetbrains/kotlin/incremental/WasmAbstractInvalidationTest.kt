@@ -13,7 +13,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.SingleRootFileViewProvider
 import com.intellij.testFramework.TestDataFile
 import org.jetbrains.kotlin.backend.wasm.compileWasm
-import org.jetbrains.kotlin.backend.wasm.ic.WasmICContext
+import org.jetbrains.kotlin.backend.wasm.ic.WasmICContextForTesting
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmCompiledFileFragment
 import org.jetbrains.kotlin.backend.wasm.writeCompilationResult
 import org.jetbrains.kotlin.cli.common.config.addKotlinSourceRoot
@@ -59,7 +59,7 @@ abstract class WasmAbstractInvalidationTest(
         private val KOTLIN_TEST_KLIB =
             File(System.getProperty("kotlin.wasm-wasi.kotlin.test.path") ?: error("Please set kotlin.test path")).canonicalPath
 
-        private const val BOX_FUNCTION_NAME = "wasi_box"
+        private const val BOX_FUNCTION_NAME = "box"
 
         private val TEST_FILE_IGNORE_PATTERN = Regex("^.*\\..+\\.\\w\\w$")
     }
@@ -264,7 +264,7 @@ abstract class WasmAbstractInvalidationTest(
 
                 val configuration = createConfiguration(projStep.order.last(), projStep.language, projectInfo.moduleKind)
 
-                val icContext = WasmICContext(allowIncompleteImplementations = false, skipLocalNames = false, skipSourceLocations = false)
+                val icContext = WasmICContextForTesting(allowIncompleteImplementations = false, skipLocalNames = false, skipSourceLocations = false)
 
                 val cacheUpdater = CacheUpdater(
                     mainModule = mainModuleInfo.modulePath,
