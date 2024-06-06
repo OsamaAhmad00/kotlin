@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.backend.common.phaser.toPhaseMap
 import org.jetbrains.kotlin.backend.wasm.ic.WasmIrProgramFragments
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmModuleMetadataCache
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.compileIrFile
+import org.jetbrains.kotlin.backend.wasm.lower.markExportedDeclarations
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
@@ -17,12 +18,15 @@ import org.jetbrains.kotlin.ir.backend.js.ic.IrProgramFragments
 import org.jetbrains.kotlin.ir.backend.js.ic.IrCompilerICInterface
 import org.jetbrains.kotlin.ir.declarations.IdSignatureRetriever
 import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi2ir.descriptors.IrBuiltInsOverDescriptors
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)
-class WasmCompilerWithIC(
+open class WasmCompilerWithIC(
     mainModule: IrModuleFragment,
     configuration: CompilerConfiguration,
     private val allowIncompleteImplementations: Boolean,
@@ -72,5 +76,19 @@ class WasmCompilerWithIC(
         lowerPreservingTags(allModules, context, phaseConfig, context.irFactory.stageController as WholeWorldStageController)
 
         return dirtyFiles.map { { compileIrFile(it) } }
+    }
+}
+
+class WasmCompilerWithICForTesting(
+    mainModule: IrModuleFragment,
+    configuration: CompilerConfiguration,
+    allowIncompleteImplementations: Boolean,
+) : WasmCompilerWithIC(mainModule, configuration, allowIncompleteImplementations) {
+    override fun compile(allModules: Collection<IrModuleFragment>, dirtyFiles: Collection<IrFile>): List<() -> IrProgramFragments> {
+        dirtyFiles.find { it.declarations.find { it is IrFunction && it.name.asString() == "box" } != null }?.let {
+            val packageFqName = it.packageFqName.asString().takeIf { it.isNotEmpty() }
+            markExportedDeclarations(context, it, setOf(FqName.fromSegments(listOfNotNull(packageFqName, "box"))))
+        }
+        return super.compile(allModules, dirtyFiles)
     }
 }
