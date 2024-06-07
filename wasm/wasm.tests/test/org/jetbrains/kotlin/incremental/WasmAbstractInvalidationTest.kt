@@ -29,7 +29,6 @@ import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.JsGenerationGranul
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.safeModuleName
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
 import org.jetbrains.kotlin.konan.file.ZipFileSystemCacheableAccessor
-import org.jetbrains.kotlin.platform.wasm.WasmTarget
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.multiplatform.isCommonSource
 import org.jetbrains.kotlin.serialization.js.ModuleKind
@@ -37,7 +36,6 @@ import org.jetbrains.kotlin.test.TargetBackend
 import org.jetbrains.kotlin.test.builders.LanguageVersionSettingsBuilder
 import org.jetbrains.kotlin.test.util.JUnit4Assertions
 import org.jetbrains.kotlin.test.utils.TestDisposable
-import org.jetbrains.kotlin.wasm.config.WasmConfigurationKeys
 import org.jetbrains.kotlin.wasm.test.tools.WasmVM
 import org.junit.jupiter.api.AfterEach
 import java.io.File
@@ -55,9 +53,9 @@ abstract class WasmAbstractInvalidationTest(
     companion object {
         private val OUT_DIR_PATH =
             System.getProperty("kotlin.wasm.test.root.out.dir") ?: error("'kotlin.wasm.test.root.out.dir' is not set")
-        private val STDLIB_KLIB = File(System.getProperty("kotlin.wasm-wasi.stdlib.path") ?: error("Please set stdlib path")).canonicalPath
+        private val STDLIB_KLIB = File(System.getProperty("kotlin.wasm-js.stdlib.path") ?: error("Please set stdlib path")).canonicalPath
         private val KOTLIN_TEST_KLIB =
-            File(System.getProperty("kotlin.wasm-wasi.kotlin.test.path") ?: error("Please set kotlin.test path")).canonicalPath
+            File(System.getProperty("kotlin.wasm-js.kotlin.test.path") ?: error("Please set kotlin.test path")).canonicalPath
 
         private const val BOX_FUNCTION_NAME = "box"
 
@@ -138,7 +136,6 @@ abstract class WasmAbstractInvalidationTest(
         copy.put(JSConfigurationKeys.MODULE_KIND, moduleKind)
         copy.put(JSConfigurationKeys.PROPERTY_LAZY_INITIALIZATION, true)
         copy.put(JSConfigurationKeys.SOURCE_MAP, true)
-        copy.put(WasmConfigurationKeys.WASM_TARGET, WasmTarget.WASI)
 
         copy.languageVersionSettings = with(LanguageVersionSettingsBuilder()) {
             language.forEach {
