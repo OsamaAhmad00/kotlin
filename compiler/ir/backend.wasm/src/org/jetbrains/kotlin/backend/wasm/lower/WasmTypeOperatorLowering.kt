@@ -184,7 +184,6 @@ class WasmBaseTypeOperatorTransformer(val context: WasmBackendContext) : IrEleme
 
         // Handled by autoboxing transformer
         if (toType.isInlined() && !fromType.isInlined()) {
-            if (fromType.isUnit()) return value
             return builder.irCall(
                 symbols.unboxIntrinsic,
                 toType,
