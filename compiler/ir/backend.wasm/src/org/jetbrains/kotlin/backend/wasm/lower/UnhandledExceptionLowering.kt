@@ -48,7 +48,6 @@ import org.jetbrains.kotlin.name.Name
 internal class UnhandledExceptionLowering(val context: WasmBackendContext) : FileLoweringPass {
     private val throwableType = context.irBuiltIns.throwableType
     private val irBooleanType = context.wasmSymbols.irBuiltIns.booleanType
-    private val irUnitType = context.wasmSymbols.irBuiltIns.unitType
     private val throwAsJsException get() = context.wasmSymbols.jsRelatedSymbols.throwAsJsException
     private val isNotFirstWasmExportCallGetter = context.wasmSymbols.isNotFirstWasmExportCall.owner.getter!!.symbol
     private val isNotFirstWasmExportCallSetter = context.wasmSymbols.isNotFirstWasmExportCall.owner.setter!!.symbol
@@ -83,8 +82,7 @@ internal class UnhandledExceptionLowering(val context: WasmBackendContext) : Fil
                 type = throwableType
             )
 
-            currentIsNotFirstWasmExportCall.initializer =
-                irGet(irBooleanType, null, isNotFirstWasmExportCallGetter)
+            currentIsNotFirstWasmExportCall.initializer = irGet(irBooleanType, null, isNotFirstWasmExportCallGetter)
 
             val tryBody = irComposite {
                 +irSet(

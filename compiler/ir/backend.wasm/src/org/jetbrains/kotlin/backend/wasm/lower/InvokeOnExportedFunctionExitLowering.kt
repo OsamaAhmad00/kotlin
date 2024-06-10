@@ -70,8 +70,7 @@ internal class InvokeOnExportedFunctionExitLowering(val context: WasmBackendCont
                 type = irBooleanType
             )
 
-            currentIsNotFirstWasmExportCall.initializer =
-                irGet(irBooleanType, null, isNotFirstWasmExportCallGetter)
+            currentIsNotFirstWasmExportCall.initializer = irGet(irBooleanType, null, isNotFirstWasmExportCallGetter)
 
             val tryBody = irComposite {
                 +irSet(
