@@ -70,11 +70,14 @@ internal class InvokeOnExportedFunctionExitLowering(val context: WasmBackendCont
                 type = irBooleanType
             )
 
-            currentIsNotFirstWasmExportCall.initializer =
-                irGet(irBooleanType, null, isNotFirstWasmExportCallGetter)
+            currentIsNotFirstWasmExportCall.initializer = irGet(irBooleanType, null, isNotFirstWasmExportCallGetter)
 
             val tryBody = irComposite {
-                +irSet(irBooleanType, null, isNotFirstWasmExportCallSetter, true.toIrConst(irBooleanType))
+                +irSet(
+                    isNotFirstWasmExportCallSetter.owner.returnType,
+                    null, isNotFirstWasmExportCallSetter,
+                    true.toIrConst(irBooleanType)
+                )
                 when (body) {
                     is IrBlockBody -> body.statements.forEach { +it }
                     is IrExpressionBody -> +body.expression
@@ -84,7 +87,7 @@ internal class InvokeOnExportedFunctionExitLowering(val context: WasmBackendCont
 
             val finally = irComposite(resultType = context.irBuiltIns.unitType) {
                 +irSet(
-                    type = irBooleanType,
+                    type = isNotFirstWasmExportCallSetter.owner.returnType,
                     receiver = null,
                     setterSymbol = isNotFirstWasmExportCallSetter,
                     value = irGet(currentIsNotFirstWasmExportCall, irBooleanType)
