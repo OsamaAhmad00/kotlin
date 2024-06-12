@@ -65,10 +65,6 @@ open class WasmCompilerWithIC(
     }
 
     override fun compile(allModules: Collection<IrModuleFragment>, dirtyFiles: Collection<IrFile>): List<() -> IrProgramFragments> {
-//        allModules.forEach {
-//            moveBodilessDeclarationsToSeparatePlace(context, it)
-//        }
-
         val phaseConfig = PhaseConfigBuilder(wasmPhases).also {
             it.enabled.addAll(wasmPhases.toPhaseMap().values)
         }.build()
