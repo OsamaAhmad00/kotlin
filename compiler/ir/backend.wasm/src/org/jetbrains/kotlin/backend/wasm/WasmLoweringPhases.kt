@@ -612,13 +612,6 @@ private val whenBranchOptimiserLoweringPhase = makeIrModulePhase(
     description = "[Optimization] Remove unreachable code in when's, it needed because dead paths could have an invalid IR after the inliner",
 )
 
-private val fieldInitializersLoweringPhase = makeIrModulePhase(
-    ::FieldInitializersLowering,
-    name = "FieldInitializersLowering",
-    description = "Move field initializers to start function",
-    prerequisite = setOf(purifyObjectInstanceGettersLoweringPhase)
-)
-
 val constEvaluationPhase = makeIrModulePhase(
     { context ->
         val configuration = IrInterpreterConfiguration(
@@ -750,7 +743,6 @@ val loweringList = listOf(
 
     objectUsageLoweringPhase,
     purifyObjectInstanceGettersLoweringPhase,
-//    fieldInitializersLoweringPhase,
 
     explicitlyCastExternalTypesPhase,
     typeOperatorLoweringPhase,
