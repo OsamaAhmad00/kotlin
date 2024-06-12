@@ -82,12 +82,6 @@ fun compileToLoweredIr(
     val moduleDescriptor = moduleFragment.descriptor
     val context = WasmBackendContext(moduleDescriptor, irBuiltIns, symbolTable, moduleFragment, propertyLazyInitialization, configuration)
 
-    //TODO WTF! REMOVE?
-    // Load declarations referenced during `context` initialization
-    allModules.forEach {
-        ExternalDependenciesGenerator(symbolTable, listOf(irLinker)).generateUnboundSymbolsAsDependencies()
-    }
-
     // Create stubs
     ExternalDependenciesGenerator(symbolTable, listOf(irLinker)).generateUnboundSymbolsAsDependencies()
     allModules.forEach { it.patchDeclarationParents() }
