@@ -12,7 +12,6 @@ import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
 import org.jetbrains.kotlin.ir.backend.js.ic.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.util.IdSignature
-import org.jetbrains.kotlin.ir.util.dump
 import java.io.File
 import java.util.*
 
@@ -36,7 +35,7 @@ open class WasmICContext(
         artifactsDir: File?,
         forceRebuildJs: Boolean,
         externalModuleName: String?,
-    ): ModuleArtifactBase =
+    ): ModuleArtifact =
         WasmModuleArtifact(moduleName, fileArtifacts.map { it as WasmSrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
 }
 
@@ -45,7 +44,7 @@ class WasmICContextForTesting(
     skipLocalNames: Boolean = false,
     skipSourceLocations: Boolean = false,
 ) : WasmICContext(allowIncompleteImplementations, skipLocalNames, skipSourceLocations) {
-    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): JsIrCompilerICInterface =
+    override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
         WasmCompilerWithICForTesting(mainModule, configuration, allowIncompleteImplementations)
 }
 

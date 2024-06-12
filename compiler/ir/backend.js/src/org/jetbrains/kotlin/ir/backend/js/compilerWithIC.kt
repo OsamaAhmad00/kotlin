@@ -45,8 +45,8 @@ class JsICContext(
         artifactsDir: File?,
         forceRebuildJs: Boolean,
         externalModuleName: String?,
-    ): ModuleArtifactBase =
-        ModuleArtifact(moduleName, fileArtifacts.map { it as SrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
+    ): ModuleArtifact =
+        JsModuleArtifact(moduleName, fileArtifacts.map { it as SrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
 }
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)

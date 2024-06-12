@@ -381,7 +381,7 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
                 )
                 icCaches.cacheGuard.release()
             } else {
-                val jsArtifacts = icCaches.artifacts.filterIsInstance<ModuleArtifact>()
+                val jsArtifacts = icCaches.artifacts.filterIsInstance<JsModuleArtifact>()
                 val jsExecutableProducer = JsExecutableProducer(
                     mainModuleName = moduleName,
                     moduleKind = moduleKind,
@@ -713,7 +713,7 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
         return moduleStructure
     }
 
-    class IcCachesArtifacts(val artifacts: List<ModuleArtifactBase>, val cacheGuard: IncrementalCacheGuard)
+    class IcCachesArtifacts(val artifacts: List<ModuleArtifact>, val cacheGuard: IncrementalCacheGuard)
 
     private fun prepareIcCaches(
         arguments: K2JSCompilerArguments,
