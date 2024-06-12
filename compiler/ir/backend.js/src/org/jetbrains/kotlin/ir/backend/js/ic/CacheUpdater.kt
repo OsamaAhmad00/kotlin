@@ -69,11 +69,11 @@ interface PlatformDependentICContext {
      */
     fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface
 
-    fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File? = null): SrcFileArtifactBase
+    fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File? = null): SrcFileArtifact
 
     fun createModuleArtifact(
         moduleName: String,
-        fileArtifacts: List<SrcFileArtifactBase>,
+        fileArtifacts: List<SrcFileArtifact>,
         artifactsDir: File? = null,
         forceRebuildJs: Boolean = false,
         externalModuleName: String? = null
