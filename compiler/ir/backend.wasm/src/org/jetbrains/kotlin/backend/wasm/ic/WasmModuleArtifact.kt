@@ -13,7 +13,7 @@ import java.io.File
 internal inline fun <T> File.ifExists(f: File.() -> T): T? = if (exists()) f() else null
 
 class WasmSrcFileArtifact(val srcFilePath: String, private val fragments: WasmIrProgramFragments?, private val astArtifact: File? = null):
-    SrcFileArtifactBase() {
+    SrcFileArtifact() {
     override fun loadIrFragments(): WasmIrProgramFragments? {
         if (fragments != null) {
             return fragments
