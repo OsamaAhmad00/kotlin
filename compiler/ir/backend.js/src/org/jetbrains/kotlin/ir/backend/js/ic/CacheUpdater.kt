@@ -77,7 +77,7 @@ interface PlatformDependentICContext {
         artifactsDir: File? = null,
         forceRebuildJs: Boolean = false,
         externalModuleName: String? = null
-    ): ModuleArtifactBase
+    ): ModuleArtifact
 }
 
 /**
@@ -661,7 +661,7 @@ class CacheUpdater(
         incrementalCacheArtifacts: Map<KotlinLibraryFile, IncrementalCacheArtifact>,
         moduleNames: Map<KotlinLibraryFile, String>,
         rebuiltFileFragments: KotlinSourceFileMap<IrProgramFragments>
-    ): List<ModuleArtifactBase> = stopwatch.measure("Incremental cache - committing artifacts") {
+    ): List<ModuleArtifact> = stopwatch.measure("Incremental cache - committing artifacts") {
         incrementalCacheArtifacts.map { (libFile, incrementalCacheArtifact) ->
             incrementalCacheArtifact.buildModuleArtifactAndCommitCache(
                 moduleName = moduleNames[libFile] ?: notFoundIcError("module name", libFile),
@@ -815,11 +815,11 @@ class CacheUpdater(
      *  - Transforms lowered IR to JS AST fragments [IrProgramFragments];
      *  - Saves the cache data on the disk.
      *
-     *  @return A module artifact list, where [ModuleArtifact] represents a compiled klib.
+     *  @return A module artifact list, where [JsModuleArtifact] represents a compiled klib.
      *   It contains either paths to files with serialized JS AST or the deserialized [IrProgramFragments] objects themselves
      *   for every file in the generating JS module. The list should be used for building the final JS module in [JsExecutableProducer]
      */
-    fun actualizeCaches(): List<ModuleArtifactBase> {
+    fun actualizeCaches(): List<ModuleArtifact> {
         stopwatch.clear()
         dirtyFileStats.clear()
 

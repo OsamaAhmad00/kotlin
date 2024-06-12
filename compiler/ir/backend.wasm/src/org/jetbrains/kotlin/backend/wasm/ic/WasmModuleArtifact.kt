@@ -37,7 +37,7 @@ class WasmModuleArtifact(
     val artifactsDir: File? = null,
     val forceRebuildJs: Boolean = false,
     externalModuleName: String? = null
-) : ModuleArtifactBase() {
+) : ModuleArtifact() {
     val moduleSafeName = moduleName.safeModuleName
 
     fun loadWasmIrModule(): WasmIrModule {
