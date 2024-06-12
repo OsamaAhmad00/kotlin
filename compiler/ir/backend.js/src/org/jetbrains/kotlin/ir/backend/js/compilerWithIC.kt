@@ -36,17 +36,17 @@ class JsICContext(
     override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
         JsIrCompilerWithIC(mainModule, mainArguments, configuration, granularity, phaseConfig, exportedDeclarations)
 
-    override fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File?): SrcFileArtifactBase =
-        SrcFileArtifact(srcFilePath, fragments as? JsIrProgramFragments, astArtifact)
+    override fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File?): SrcFileArtifact =
+        JsSrcFileArtifact(srcFilePath, fragments as? JsIrProgramFragments, astArtifact)
 
     override fun createModuleArtifact(
         moduleName: String,
-        fileArtifacts: List<SrcFileArtifactBase>,
+        fileArtifacts: List<SrcFileArtifact>,
         artifactsDir: File?,
         forceRebuildJs: Boolean,
         externalModuleName: String?,
     ): ModuleArtifact =
-        JsModuleArtifact(moduleName, fileArtifacts.map { it as SrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
+        JsModuleArtifact(moduleName, fileArtifacts.map { it as JsSrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
 }
 
 @OptIn(ObsoleteDescriptorBasedAPI::class)

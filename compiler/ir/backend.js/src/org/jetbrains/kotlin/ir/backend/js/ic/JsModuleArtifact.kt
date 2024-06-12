@@ -11,13 +11,13 @@ import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.safeModuleName
 import org.jetbrains.kotlin.ir.backend.js.utils.serialization.deserializeJsIrProgramFragment
 import java.io.File
 
-abstract class SrcFileArtifactBase {
+abstract class SrcFileArtifact {
     abstract fun loadIrFragments(): IrProgramFragments?
     abstract fun isModified(): Boolean
 }
 
 abstract class ModuleArtifact {
-    abstract val fileArtifacts: List<SrcFileArtifactBase>
+    abstract val fileArtifacts: List<SrcFileArtifact>
 }
 
 /**
@@ -26,8 +26,8 @@ abstract class ModuleArtifact {
  * @param fragments - The JS AST itself. It is non-null if the kt file is dirty, and its IR has been lowered and transformed into JS AST.
  * @param astArtifact - Path to a serialized JS AST. It is typically used to obtain the JS AST if the kt file is unmodified.
  */
-class SrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgramFragments?, private val astArtifact: File? = null):
-    SrcFileArtifactBase() {
+class JsSrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgramFragments?, private val astArtifact: File? = null):
+    SrcFileArtifact() {
     override fun loadIrFragments(): JsIrProgramFragments? {
         if (fragments != null) {
             return fragments
@@ -48,7 +48,7 @@ class SrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgra
  */
 class JsModuleArtifact(
     moduleName: String,
-    override val fileArtifacts: List<SrcFileArtifact>,
+    override val fileArtifacts: List<JsSrcFileArtifact>,
     val artifactsDir: File? = null,
     val forceRebuildJs: Boolean = false,
     externalModuleName: String? = null

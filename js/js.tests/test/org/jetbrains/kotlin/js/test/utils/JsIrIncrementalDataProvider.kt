@@ -28,7 +28,7 @@ private class TestArtifactCache(val moduleName: String, val binaryAsts: MutableM
         return JsModuleArtifact(
             moduleName = moduleName,
             fileArtifacts = binaryAsts.entries.map {
-                SrcFileArtifact(
+                JsSrcFileArtifact(
                     srcFilePath = it.key,
                     // TODO: It will be better to use saved fragments, but it doesn't work
                     //  Merger.merge() + JsNode.resolveTemporaryNames() modify fragments,

@@ -18,8 +18,7 @@ class WasmSrcFileArtifact(
     private val astArtifact: File? = null,
     private val skipLocalNames: Boolean = false,
     private val skipSourceLocations: Boolean
-):
-    SrcFileArtifactBase() {
+) : SrcFileArtifact() {
     override fun loadIrFragments(): WasmIrProgramFragments? {
         if (fragments != null) {
             return fragments

@@ -31,7 +31,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
         private fun JsIrProgramFragment.getExportFragmentExternalName(moduleArtifact: JsModuleArtifact) =
             moduleFragmentToExternalName.getExternalNameForExporterFile(name, packageFqn, moduleArtifact.moduleExternalName)
 
-        private fun SrcFileArtifact.loadJsIrModuleHeaders(moduleArtifact: JsModuleArtifact) = with(loadIrFragments()!!) {
+        private fun JsSrcFileArtifact.loadJsIrModuleHeaders(moduleArtifact: JsModuleArtifact) = with(loadIrFragments()!!) {
             LoadedJsIrModuleHeaders(
                 mainFragment.mainFunctionTag,
                 mainFragment.run {
@@ -79,7 +79,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
 
         sealed class SerializableCachedFileInfo(
             moduleArtifact: JsModuleArtifact,
-            val fileArtifact: SrcFileArtifact,
+            val fileArtifact: JsSrcFileArtifact,
             moduleHeader: JsIrModuleHeader?
         ) : CachedFileInfo(moduleArtifact, moduleHeader) {
             fun getArtifactWithName(name: String): File? = moduleArtifact.artifactsDir?.let { File(it, "$filePrefix.$name") }
@@ -100,7 +100,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
             }
         }
 
-        open class MainFileCachedInfo(moduleArtifact: JsModuleArtifact, fileArtifact: SrcFileArtifact, moduleHeader: JsIrModuleHeader? = null) :
+        open class MainFileCachedInfo(moduleArtifact: JsModuleArtifact, fileArtifact: JsSrcFileArtifact, moduleHeader: JsIrModuleHeader? = null) :
             SerializableCachedFileInfo(moduleArtifact, fileArtifact, moduleHeader) {
             var mainFunctionTag: String? = null
             var testEnvironment: JsIrProgramTestEnvironment? = null
@@ -163,7 +163,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
 
         open class ExportFileCachedInfo(
             moduleArtifact: JsModuleArtifact,
-            fileArtifact: SrcFileArtifact,
+            fileArtifact: JsSrcFileArtifact,
             moduleHeader: JsIrModuleHeader? = null,
             var tsDeclarationsHash: Long? = null
         ) : SerializableCachedFileInfo(moduleArtifact, fileArtifact, moduleHeader) {
@@ -255,7 +255,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
     private fun <T> CachedFileInfo.MainFileCachedInfo.readModuleHeaderCache(f: CodedInputStream.() -> T): T? =
         moduleHeaderArtifact?.useCodedInputIfExists(f)
 
-    private fun JsModuleArtifact.fetchFileInfoFor(fileArtifact: SrcFileArtifact): CachedFileInfo.MainFileCachedInfo? {
+    private fun JsModuleArtifact.fetchFileInfoFor(fileArtifact: JsSrcFileArtifact): CachedFileInfo.MainFileCachedInfo? {
         val mainFileCachedFileInfo = CachedFileInfo.MainFileCachedInfo(this, fileArtifact)
 
         return mainFileCachedFileInfo.readModuleHeaderCache {
@@ -347,7 +347,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
             }
     }
 
-    private fun JsModuleArtifact.loadFileInfoFor(fileArtifact: SrcFileArtifact): CachedFileInfo.MainFileCachedInfo {
+    private fun JsModuleArtifact.loadFileInfoFor(fileArtifact: JsSrcFileArtifact): CachedFileInfo.MainFileCachedInfo {
         val headers = fileArtifact.loadJsIrModuleHeaders(this)
         val mainFragment =
             headers.mainHeader.associatedModule?.fragments?.single() ?: error("Unexpected multiple fragments inside mainHeader")
@@ -400,7 +400,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
     override fun loadProgramHeadersFromCache(): List<CachedFileInfo> {
         val mainModuleArtifact = moduleArtifacts.last()
 
-        val perFileGenerator = object : PerFileGenerator<JsModuleArtifact, SrcFileArtifact, CachedFileInfo> {
+        val perFileGenerator = object : PerFileGenerator<JsModuleArtifact, JsSrcFileArtifact, CachedFileInfo> {
             override val mainModuleName get() = mainModuleArtifact.moduleExternalName
 
             override val JsModuleArtifact.isMain get() = this === mainModuleArtifact
@@ -420,7 +420,7 @@ class JsPerFileCache(private val moduleArtifacts: List<JsModuleArtifact>) : JsMu
             override fun CachedFileInfo.takeTestEnvironmentOwnership() =
                 (this as CachedFileInfo.MainFileCachedInfo).testEnvironment
 
-            override fun SrcFileArtifact.generateArtifact(module: JsModuleArtifact) = when {
+            override fun JsSrcFileArtifact.generateArtifact(module: JsModuleArtifact) = when {
                 isModified() -> module.loadFileInfoFor(this)
                 else -> module.fetchFileInfoFor(this) ?: module.loadFileInfoFor(this)
             }
