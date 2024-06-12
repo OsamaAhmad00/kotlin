@@ -59,7 +59,7 @@ internal class IncrementalCacheArtifact(
         moduleName: String,
         rebuiltFileFragments: Map<KotlinSourceFile, IrProgramFragments>,
         icContext: PlatformDependentICContext,
-    ): ModuleArtifactBase {
+    ): ModuleArtifact {
         val fileArtifacts = srcCacheActions.map { srcFileAction ->
             val rebuiltFileFragment = rebuiltFileFragments[srcFileAction.srcFile]
             if (rebuiltFileFragment != null) {

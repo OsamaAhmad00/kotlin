@@ -13,7 +13,6 @@ import org.jetbrains.kotlin.ir.backend.js.ic.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.AbstractIrFactoryImplForIC
 import org.jetbrains.kotlin.ir.util.IdSignature
-import org.jetbrains.kotlin.ir.util.dump
 import java.io.File
 import java.util.*
 
@@ -33,7 +32,7 @@ open class WasmICContext(protected val allowIncompleteImplementations: Boolean) 
         artifactsDir: File?,
         forceRebuildJs: Boolean,
         externalModuleName: String?,
-    ): ModuleArtifactBase =
+    ): ModuleArtifact =
         WasmModuleArtifact(moduleName, fileArtifacts.map { it as WasmSrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
 }
 

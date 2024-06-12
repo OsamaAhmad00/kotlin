@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
 import org.jetbrains.kotlin.ir.backend.js.ic.*
 import org.jetbrains.kotlin.ir.backend.js.moduleName
-import org.jetbrains.kotlin.ir.backend.js.utils.serialization.serializeTo
 import org.jetbrains.kotlin.ir.backend.js.utils.serialization.deserializeJsIrProgramFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImplForJsIC
 import org.jetbrains.kotlin.js.test.handlers.JsBoxRunner
@@ -25,8 +24,8 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 
 private class TestArtifactCache(val moduleName: String, val binaryAsts: MutableMap<String, ByteArray> = mutableMapOf()) {
-    fun fetchArtifacts(): ModuleArtifact {
-        return ModuleArtifact(
+    fun fetchArtifacts(): JsModuleArtifact {
+        return JsModuleArtifact(
             moduleName = moduleName,
             fileArtifacts = binaryAsts.entries.map {
                 SrcFileArtifact(

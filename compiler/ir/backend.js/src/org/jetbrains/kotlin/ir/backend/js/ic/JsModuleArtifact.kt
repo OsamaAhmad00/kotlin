@@ -16,7 +16,7 @@ abstract class SrcFileArtifactBase {
     abstract fun isModified(): Boolean
 }
 
-abstract class ModuleArtifactBase {
+abstract class ModuleArtifact {
     abstract val fileArtifacts: List<SrcFileArtifactBase>
 }
 
@@ -46,13 +46,13 @@ class SrcFileArtifact(val srcFilePath: String, private val fragments: JsIrProgra
  * The directory [artifactsDir] is used by both [JsPerFileCache] and [JsPerModuleCache] for storing their own caches.
  * This dirty hack allows keeping caches for [CacheUpdater] and [JsExecutableProducer] in one directory.
  */
-class ModuleArtifact(
+class JsModuleArtifact(
     moduleName: String,
     override val fileArtifacts: List<SrcFileArtifact>,
     val artifactsDir: File? = null,
     val forceRebuildJs: Boolean = false,
     externalModuleName: String? = null
-) : ModuleArtifactBase() {
+) : ModuleArtifact() {
     val moduleSafeName = moduleName.safeModuleName
     val moduleExternalName = externalModuleName ?: moduleSafeName
 

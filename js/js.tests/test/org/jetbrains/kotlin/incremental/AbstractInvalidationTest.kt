@@ -416,7 +416,7 @@ abstract class AbstractInvalidationTest(
 
                 val removedModulesInfo = (projectInfo.modules - projStep.order.toSet()).map { setupTestStep(projStep, it) }
 
-                val icCaches = cacheUpdater.actualizeCaches().map { it as ModuleArtifact }
+                val icCaches = cacheUpdater.actualizeCaches().map { it as JsModuleArtifact }
                 verifyCacheUpdateStats(projStep.id, cacheUpdater.getDirtyFileLastStats(), testInfo + removedModulesInfo)
 
                 val mainModuleName = icCaches.last().moduleExternalName
