@@ -180,16 +180,6 @@ class WasmCompiledModuleFragment(
             }
         }
 
-        val jsCodeCounter = mutableMapOf<String, Int>()
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.uniqueJsFunNames.unbound.forEach { (jsFunName, symbol) ->
-                val counterValue = jsCodeCounter.getOrPut(jsFunName, defaultValue = { 0 })
-                jsCodeCounter[jsFunName] = counterValue + 1
-                val counterSuffix = if (counterValue == 0 && jsFunName.lastOrNull()?.isDigit() == false) "" else "_$counterValue"
-                symbol.bind("$jsFunName$counterSuffix")
-            }
-        }
-
         val serviceCodeLocation = SourceLocation.NoLocation("Generated service code")
 
         val parameterlessNoReturnFunctionType = WasmFunctionType(emptyList(), emptyList())
@@ -362,6 +352,7 @@ class WasmCompiledModuleFragment(
         bindScratchMemAddr()
         bindStringPoolSymbols()
         bindConstantArrayDataSegmentIds()
+        bindUniqueJsFunNames()
     }
 
     private fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bindFileFragments(
@@ -470,6 +461,18 @@ class WasmCompiledModuleFragment(
                 }
                 val constData = ConstantDataIntegerArray("constant_array", constantArraySegment.first, integerSize)
                 data.add(WasmData(WasmDataMode.Passive, constData.toBytes()))
+            }
+        }
+    }
+
+    private fun bindUniqueJsFunNames() {
+        val jsCodeCounter = mutableMapOf<String, Int>()
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.uniqueJsFunNames.unbound.forEach { (jsFunName, symbol) ->
+                val counterValue = jsCodeCounter.getOrPut(jsFunName, defaultValue = { 0 })
+                jsCodeCounter[jsFunName] = counterValue + 1
+                val counterSuffix = if (counterValue == 0 && jsFunName.lastOrNull()?.isDigit() == false) "" else "_$counterValue"
+                symbol.bind("$jsFunName$counterSuffix")
             }
         }
     }
