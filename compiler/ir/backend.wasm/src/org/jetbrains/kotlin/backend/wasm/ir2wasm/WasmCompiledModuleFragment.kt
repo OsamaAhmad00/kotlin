@@ -174,27 +174,7 @@ class WasmCompiledModuleFragment(
         addCompileTimePerClassData()
         createExportedFunctions()
         // bindClosureCallExports()
-
-        //TODO Better way to resolve clashed exports (especially for adapters)
-        val exportNames = mutableMapOf<String, Int>()
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.exports.forEach { export ->
-                if (export is WasmExport.Function) {
-                    val exportNumber = exportNames[export.name]
-                    if (exportNumber == null) {
-                        exports.add(export)
-                        exportNames[export.name] = 1
-                    } else {
-                        val renamedExport = WasmExport.Function("${export.name}_$exportNumber", export.field)
-                        exports.add(renamedExport)
-                        exportNames[export.name] = exportNumber + 1
-                    }
-                } else {
-                    exports.add(export)
-                }
-            }
-        }
-
+        resolveExportedFunctionsClashes()
         exports += WasmExport.Function("_initialize", masterInitFunction)
         exports += WasmExport.Function("startUnitTests", startUnitTestsFunction)
 
@@ -273,6 +253,28 @@ class WasmCompiledModuleFragment(
         )
         module.calculateIds()
         return module
+    }
+
+    private fun resolveExportedFunctionsClashes() {
+        //TODO Better way to resolve clashed exports (especially for adapters)
+        val exportNames = mutableMapOf<String, Int>()
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.exports.forEach { export ->
+                if (export is WasmExport.Function) {
+                    val exportNumber = exportNames[export.name]
+                    if (exportNumber == null) {
+                        exports.add(export)
+                        exportNames[export.name] = 1
+                    } else {
+                        val renamedExport = WasmExport.Function("${export.name}_$exportNumber", export.field)
+                        exports.add(renamedExport)
+                        exportNames[export.name] = exportNumber + 1
+                    }
+                } else {
+                    exports.add(export)
+                }
+            }
+        }
     }
 
     private fun bindClosureCallExports() {
