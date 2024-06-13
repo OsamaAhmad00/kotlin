@@ -55,6 +55,8 @@ class WasmCompiledModuleFragment(
     private val generateTrapsInsteadOfExceptions: Boolean,
 ) {
     private val canonicalFunctionTypes = LinkedHashMap<WasmFunctionType, WasmFunctionType>()
+    val classIds = mutableMapOf<IdSignature, Int>()
+    var currentDataSectionAddress = 0
 
     class JsCodeSnippet(val importName: WasmSymbolReadOnly<String>, val jsCode: String)
 
@@ -160,18 +162,6 @@ class WasmCompiledModuleFragment(
 
     fun linkWasmCompiledFragments(): WasmModule {
         bindUnboundSymbols()
-
-        var currentDataSectionAddress = 0
-        val classIds = mutableMapOf<IdSignature, Int>()
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.typeInfo.forEach { (referenceKey, dataElement) ->
-                classIds[referenceKey] = currentDataSectionAddress
-                currentDataSectionAddress += dataElement.sizeInBytes
-            }
-        }
-        wasmCompiledFileFragments.forEach { fragment ->
-            bind(fragment.classIds.unbound, classIds)
-        }
 
         currentDataSectionAddress = alignUp(currentDataSectionAddress, INT_SIZE_BYTES)
         wasmCompiledFileFragments.forEach { fragment ->
@@ -420,6 +410,7 @@ class WasmCompiledModuleFragment(
         bindFileFragments(wasmCompiledFileFragments, { it.functionTypes.unbound }, { it.functionTypes.defined })
         bindUnboundFunctionTypes()
         bindInterfaceIds()
+        bindClassIds()
     }
 
     private fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bindFileFragments(
@@ -455,6 +446,20 @@ class WasmCompiledModuleFragment(
             fragment.interfaceIds.unbound.values.forEach { wasmSymbol ->
                 wasmSymbol.bind(interfaceId--)
             }
+        }
+    }
+
+    private fun bindClassIds() {
+        classIds.clear()
+        currentDataSectionAddress = 0
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.typeInfo.forEach { (referenceKey, dataElement) ->
+                classIds[referenceKey] = currentDataSectionAddress
+                currentDataSectionAddress += dataElement.sizeInBytes
+            }
+        }
+        wasmCompiledFileFragments.forEach { fragment ->
+            bind(fragment.classIds.unbound, classIds)
         }
     }
 }
