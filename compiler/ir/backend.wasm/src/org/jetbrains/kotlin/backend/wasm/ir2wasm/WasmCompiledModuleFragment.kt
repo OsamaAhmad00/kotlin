@@ -333,13 +333,9 @@ class WasmCompiledModuleFragment(
 //            }
 //        }
 
-        //OPT
-        //TODO(CREATE NEW STARTUNITTEST?)
-        val startUnitTests = wasmCompiledFileFragments.firstNotNullOfOrNull { fragment ->
-            fragment.functions.defined.values.find { it.name == "kotlin.test.startUnitTests" }
-        }
-        check(startUnitTests is WasmFunction.Defined)
-        with(WasmIrExpressionBuilder(startUnitTests.instructions)) {
+        val startUnitTestsFunction = WasmFunction.Defined("kotlin.test.startUnitTests", WasmSymbol(parameterlessNoReturnFunctionType))
+        val startUnitTestsExport = WasmExport.Function("startUnitTests", startUnitTestsFunction)
+        with(WasmIrExpressionBuilder(startUnitTestsFunction.instructions)) {
             wasmCompiledFileFragments.forEach { fragment ->
                 val signature = fragment.testFun
                 if (signature != null) {
@@ -349,7 +345,7 @@ class WasmCompiledModuleFragment(
             }
         }
 
-        val exports = mutableListOf<WasmExport<*>>()
+        val exports = mutableListOf<WasmExport<*>>(startUnitTestsExport)
 
         //TODO Better way to resolve clashed exports (especially for adapters)
         val exportNames = mutableMapOf<String, Int>()
@@ -435,7 +431,7 @@ class WasmCompiledModuleFragment(
             recGroupTypes = recGroupTypes,
             importsInOrder = importedFunctions,
             importedFunctions = importedFunctions,
-            definedFunctions = definedFunctions + fieldInitializerFunction + masterInitFunction,
+            definedFunctions = definedFunctions + fieldInitializerFunction + masterInitFunction + startUnitTestsFunction,
             tables = emptyList(),
             memories = listOf(memory),
             globals = globals,
