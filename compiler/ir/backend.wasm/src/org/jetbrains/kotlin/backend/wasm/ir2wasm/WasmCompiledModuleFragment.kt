@@ -173,51 +173,7 @@ class WasmCompiledModuleFragment(
         bindUnboundSymbols()
         addCompileTimePerClassData()
         createExportedFunctions()
-
-        val serviceCodeLocation = SourceLocation.NoLocation("Generated service code")
-
-        val parameterlessNoReturnFunctionType = WasmFunctionType(emptyList(), emptyList())
-
-        val fieldInitializerFunction = WasmFunction.Defined("_fieldInitialize", WasmSymbol(parameterlessNoReturnFunctionType))
-        with(WasmIrExpressionBuilder(fieldInitializerFunction.instructions)) {
-            wasmCompiledFileFragments.forEach { fragment ->
-                fragment.fieldInitializers.forEach { (field, initializer) ->
-                    val fieldSymbol = WasmSymbol(fragment.globalFields.defined[field])
-                    if (fieldSymbol.owner.name == "kotlin.wasm.internal.stringPool") {
-                        expression.add(0, WasmInstrWithoutLocation(WasmOp.GLOBAL_SET, listOf(WasmImmediate.GlobalIdx(fieldSymbol))))
-                        expression.addAll(0, initializer)
-                    } else {
-                        expression.addAll(initializer)
-                        buildSetGlobal(fieldSymbol, serviceCodeLocation)
-                    }
-                }
-            }
-        }
-
-        val masterInitFunction = WasmFunction.Defined("_initialize", WasmSymbol(parameterlessNoReturnFunctionType))
-        with(WasmIrExpressionBuilder(masterInitFunction.instructions)) {
-            buildCall(WasmSymbol(fieldInitializerFunction), serviceCodeLocation)
-            wasmCompiledFileFragments.forEach { fragment ->
-                fragment.mainFunctionWrappers.forEach { signature ->
-                    val wrapperFunction = fragment.functions.defined[signature] ?: error("Cannot find symbol for main wrapper")
-                    buildCall(WasmSymbol(wrapperFunction), serviceCodeLocation)
-                }
-            }
-            buildInstr(WasmOp.RETURN, serviceCodeLocation)
-        }
-
-        //closureCallExports
-//        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
-//        wasmCompiledFileFragments.forEach { fragment ->
-//            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
-//                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
-//                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
-//                    WasmSymbol(wasmExportFunction)
-//                }
-//                //Rebind export function
-//                fragment.functions.unbound[exportFunction]!!.bind(symbol)
-//            }
-//        }
+        // bindClosureCallExports()
 
         //TODO Better way to resolve clashed exports (especially for adapters)
         val exportNames = mutableMapOf<String, Int>()
@@ -319,22 +275,28 @@ class WasmCompiledModuleFragment(
         return module
     }
 
-    private fun createExportedFunctions() {
-        fieldInitializerFunction.instructions.clear()
-        with(WasmIrExpressionBuilder(fieldInitializerFunction.instructions)) {
-            wasmCompiledFileFragments.forEach { fragment ->
-                fragment.fieldInitializers.forEach { (field, initializer) ->
-                    val fieldSymbol = WasmSymbol(fragment.globalFields.defined[field])
-                    if (fieldSymbol.owner.name == "kotlin.wasm.internal.stringPool") {
-                        expression.add(0, WasmInstrWithoutLocation(WasmOp.GLOBAL_SET, listOf(WasmImmediate.GlobalIdx(fieldSymbol))))
-                        expression.addAll(0, initializer)
-                    } else {
-                        expression.addAll(initializer)
-                        buildSetGlobal(fieldSymbol, serviceCodeLocation)
-                    }
+    private fun bindClosureCallExports() {
+        // closureCallExports
+        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
+                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
+                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
+                    WasmSymbol(wasmExportFunction)
                 }
+                //Rebind export function
+                fragment.functions.unbound[exportFunction]!!.bind(symbol)
             }
         }
+    }
+
+    private fun createExportedFunctions() {
+        createMasterInitFunction()
+        createStartUnitTestsFunction()
+    }
+
+    private fun createMasterInitFunction() {
+        createFieldInitializerFunction()
 
         masterInitFunction.instructions.clear()
         with(WasmIrExpressionBuilder(masterInitFunction.instructions)) {
@@ -347,7 +309,9 @@ class WasmCompiledModuleFragment(
             }
             buildInstr(WasmOp.RETURN, serviceCodeLocation)
         }
+    }
 
+    private fun createStartUnitTestsFunction() {
         startUnitTestsFunction.instructions.clear()
         with(WasmIrExpressionBuilder(startUnitTestsFunction.instructions)) {
             wasmCompiledFileFragments.forEach { fragment ->
@@ -355,6 +319,24 @@ class WasmCompiledModuleFragment(
                 if (signature != null) {
                     val testRunner = fragment.functions.defined[signature] ?: error("Cannot find symbol for test runner")
                     buildCall(WasmSymbol(testRunner), serviceCodeLocation)
+                }
+            }
+        }
+    }
+
+    private fun createFieldInitializerFunction() {
+        fieldInitializerFunction.instructions.clear()
+        with(WasmIrExpressionBuilder(fieldInitializerFunction.instructions)) {
+            wasmCompiledFileFragments.forEach { fragment ->
+                fragment.fieldInitializers.forEach { (field, initializer) ->
+                    val fieldSymbol = WasmSymbol(fragment.globalFields.defined[field])
+                    if (fieldSymbol.owner.name == "kotlin.wasm.internal.stringPool") {
+                        expression.add(0, WasmInstrWithoutLocation(WasmOp.GLOBAL_SET, listOf(WasmImmediate.GlobalIdx(fieldSymbol))))
+                        expression.addAll(0, initializer)
+                    } else {
+                        expression.addAll(initializer)
+                        buildSetGlobal(fieldSymbol, serviceCodeLocation)
+                    }
                 }
             }
         }
