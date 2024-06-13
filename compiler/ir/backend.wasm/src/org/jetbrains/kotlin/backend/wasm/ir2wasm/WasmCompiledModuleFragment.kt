@@ -166,21 +166,6 @@ class WasmCompiledModuleFragment(
         bindUnboundSymbols()
 
         wasmCompiledFileFragments.forEach { fragment ->
-            fragment.constantArrayDataSegmentId.unbound.forEach { (constantArraySegment, symbol) ->
-                symbol.bind(data.size)
-                val integerSize = when (constantArraySegment.second) {
-                    WasmI8 -> BYTE_SIZE_BYTES
-                    WasmI16 -> SHORT_SIZE_BYTES
-                    WasmI32 -> INT_SIZE_BYTES
-                    WasmI64 -> LONG_SIZE_BYTES
-                    else -> TODO("type ${constantArraySegment.second} is not implemented")
-                }
-                val constData = ConstantDataIntegerArray("constant_array", constantArraySegment.first, integerSize)
-                data.add(WasmData(WasmDataMode.Passive, constData.toBytes()))
-            }
-        }
-
-        wasmCompiledFileFragments.forEach { fragment ->
             fragment.typeInfo.forEach { (referenceKey, typeInfo) ->
                 val instructions = mutableListOf<WasmInstr>()
                 WasmIrExpressionBuilder(instructions).buildConstI32(
@@ -376,6 +361,7 @@ class WasmCompiledModuleFragment(
         bindClassIds()
         bindScratchMemAddr()
         bindStringPoolSymbols()
+        bindConstantArrayDataSegmentIds()
     }
 
     private fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bindFileFragments(
@@ -469,6 +455,23 @@ class WasmCompiledModuleFragment(
         }
 
         data.add(WasmData(WasmDataMode.Passive, stringDataSectionBytes.toByteArray()))
+    }
+
+    private fun bindConstantArrayDataSegmentIds() {
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.constantArrayDataSegmentId.unbound.forEach { (constantArraySegment, symbol) ->
+                symbol.bind(data.size)
+                val integerSize = when (constantArraySegment.second) {
+                    WasmI8 -> BYTE_SIZE_BYTES
+                    WasmI16 -> SHORT_SIZE_BYTES
+                    WasmI32 -> INT_SIZE_BYTES
+                    WasmI64 -> LONG_SIZE_BYTES
+                    else -> TODO("type ${constantArraySegment.second} is not implemented")
+                }
+                val constData = ConstantDataIntegerArray("constant_array", constantArraySegment.first, integerSize)
+                data.add(WasmData(WasmDataMode.Passive, constData.toBytes()))
+            }
+        }
     }
 }
 
