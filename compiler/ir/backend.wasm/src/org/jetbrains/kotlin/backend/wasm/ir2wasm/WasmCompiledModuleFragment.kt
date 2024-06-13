@@ -54,6 +54,8 @@ class WasmCompiledModuleFragment(
     private val wasmCompiledFileFragments: List<WasmCompiledFileFragment>,
     private val generateTrapsInsteadOfExceptions: Boolean,
 ) {
+    private val canonicalFunctionTypes = LinkedHashMap<WasmFunctionType, WasmFunctionType>()
+
     class JsCodeSnippet(val importName: WasmSymbolReadOnly<String>, val jsCode: String)
 
     open class ReferencableElements<Ir, Wasm : Any>(
@@ -171,17 +173,6 @@ class WasmCompiledModuleFragment(
 
     fun linkWasmCompiledFragments(): WasmModule {
         bindUnboundSymbols()
-        // Associate function types to a single canonical function type
-        val canonicalFunctionTypes = LinkedHashMap<WasmFunctionType, WasmFunctionType>()
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.functionTypes.elements.associateWithTo(canonicalFunctionTypes) { it }
-        }
-        // Rebind symbol to canonical
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.functionTypes.unbound.forEach { (_, wasmSymbol) ->
-                wasmSymbol.bind(canonicalFunctionTypes.getValue(wasmSymbol.owner))
-            }
-        }
 
         var interfaceId = 0
         wasmCompiledFileFragments.forEach { fragment ->
@@ -447,6 +438,21 @@ class WasmCompiledModuleFragment(
         bindFileFragments(wasmCompiledFileFragments, { it.vTableGcTypes.unbound }, { it.vTableGcTypes.defined })
         bindFileFragments(wasmCompiledFileFragments, { it.globalClassITables.unbound }, { it.globalClassITables.defined })
         bindFileFragments(wasmCompiledFileFragments, { it.functionTypes.unbound }, { it.functionTypes.defined })
+        bindUnboundFunctionTypes()
+    }
+
+    private fun bindUnboundFunctionTypes() {
+        // Associate function types to a single canonical function type
+        canonicalFunctionTypes.clear()
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.functionTypes.elements.associateWithTo(canonicalFunctionTypes) { it }
+        }
+        // Rebind symbol to canonical
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.functionTypes.unbound.forEach { (_, wasmSymbol) ->
+                wasmSymbol.bind(canonicalFunctionTypes.getValue(wasmSymbol.owner))
+            }
+        }
     }
 }
 
