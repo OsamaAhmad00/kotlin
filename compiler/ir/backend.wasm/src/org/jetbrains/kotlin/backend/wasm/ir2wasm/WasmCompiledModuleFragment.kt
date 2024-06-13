@@ -174,13 +174,6 @@ class WasmCompiledModuleFragment(
     fun linkWasmCompiledFragments(): WasmModule {
         bindUnboundSymbols()
 
-        var interfaceId = 0
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.interfaceIds.unbound.values.forEach { wasmSymbol ->
-                wasmSymbol.bind(interfaceId--)
-            }
-        }
-
         var currentDataSectionAddress = 0
         val classIds = mutableMapOf<IdSignature, Int>()
         wasmCompiledFileFragments.forEach { fragment ->
@@ -439,6 +432,7 @@ class WasmCompiledModuleFragment(
         bindFileFragments(wasmCompiledFileFragments, { it.globalClassITables.unbound }, { it.globalClassITables.defined })
         bindFileFragments(wasmCompiledFileFragments, { it.functionTypes.unbound }, { it.functionTypes.defined })
         bindUnboundFunctionTypes()
+        bindInterfaceIds()
     }
 
     private fun bindUnboundFunctionTypes() {
@@ -451,6 +445,15 @@ class WasmCompiledModuleFragment(
         wasmCompiledFileFragments.forEach { fragment ->
             fragment.functionTypes.unbound.forEach { (_, wasmSymbol) ->
                 wasmSymbol.bind(canonicalFunctionTypes.getValue(wasmSymbol.owner))
+            }
+        }
+    }
+
+    private fun bindInterfaceIds() {
+        var interfaceId = 0
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.interfaceIds.unbound.values.forEach { wasmSymbol ->
+                wasmSymbol.bind(interfaceId--)
             }
         }
     }
