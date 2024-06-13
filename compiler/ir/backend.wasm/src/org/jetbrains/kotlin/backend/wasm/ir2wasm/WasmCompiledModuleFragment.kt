@@ -288,21 +288,12 @@ class WasmCompiledModuleFragment(
     }
 
     private fun createExportedFunctions() {
-        fieldInitializerFunction.instructions.clear()
-        with(WasmIrExpressionBuilder(fieldInitializerFunction.instructions)) {
-            wasmCompiledFileFragments.forEach { fragment ->
-                fragment.fieldInitializers.forEach { (field, initializer) ->
-                    val fieldSymbol = WasmSymbol(fragment.globalFields.defined[field])
-                    if (fieldSymbol.owner.name == "kotlin.wasm.internal.stringPool") {
-                        expression.add(0, WasmInstrWithoutLocation(WasmOp.GLOBAL_SET, listOf(WasmImmediate.GlobalIdx(fieldSymbol))))
-                        expression.addAll(0, initializer)
-                    } else {
-                        expression.addAll(initializer)
-                        buildSetGlobal(fieldSymbol, serviceCodeLocation)
-                    }
-                }
-            }
-        }
+        createMasterInitFunction()
+        createStartUnitTestsFunction()
+    }
+
+    private fun createMasterInitFunction() {
+        createFieldInitializerFunction()
 
         masterInitFunction.instructions.clear()
         with(WasmIrExpressionBuilder(masterInitFunction.instructions)) {
@@ -315,7 +306,9 @@ class WasmCompiledModuleFragment(
             }
             buildInstr(WasmOp.RETURN, serviceCodeLocation)
         }
+    }
 
+    private fun createStartUnitTestsFunction() {
         startUnitTestsFunction.instructions.clear()
         with(WasmIrExpressionBuilder(startUnitTestsFunction.instructions)) {
             wasmCompiledFileFragments.forEach { fragment ->
@@ -323,6 +316,24 @@ class WasmCompiledModuleFragment(
                 if (signature != null) {
                     val testRunner = fragment.functions.defined[signature] ?: error("Cannot find symbol for test runner")
                     buildCall(WasmSymbol(testRunner), serviceCodeLocation)
+                }
+            }
+        }
+    }
+
+    private fun createFieldInitializerFunction() {
+        fieldInitializerFunction.instructions.clear()
+        with(WasmIrExpressionBuilder(fieldInitializerFunction.instructions)) {
+            wasmCompiledFileFragments.forEach { fragment ->
+                fragment.fieldInitializers.forEach { (field, initializer) ->
+                    val fieldSymbol = WasmSymbol(fragment.globalFields.defined[field])
+                    if (fieldSymbol.owner.name == "kotlin.wasm.internal.stringPool") {
+                        expression.add(0, WasmInstrWithoutLocation(WasmOp.GLOBAL_SET, listOf(WasmImmediate.GlobalIdx(fieldSymbol))))
+                        expression.addAll(0, initializer)
+                    } else {
+                        expression.addAll(initializer)
+                        buildSetGlobal(fieldSymbol, serviceCodeLocation)
+                    }
                 }
             }
         }
