@@ -89,19 +89,6 @@ class WasmCompiledModuleFragment(
         }
     }
 
-    private fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bindFileFragments(
-        fragments: List<WasmCompiledFileFragment>,
-        unboundSelector: (WasmCompiledFileFragment) -> Map<IrSymbolType, WasmSymbolType>,
-        definedSelector: (WasmCompiledFileFragment) -> Map<IrSymbolType, WasmDeclarationType>,
-    ) {
-        val allDefined = mutableMapOf<IrSymbolType, WasmDeclarationType>()
-        fragments.forEach { allDefined.putAll(definedSelector(it)) }
-        for (fragment in fragments) {
-            val unbound = unboundSelector(fragment)
-            bind(unbound, allDefined)
-        }
-    }
-
     fun createInterfaceTablesAndLinkTableSymbols() {
         val disjointUnions = DisjointUnions<IdSignature>()
         for (fileFragment in wasmCompiledFileFragments) {
@@ -433,6 +420,19 @@ class WasmCompiledModuleFragment(
         bindFileFragments(wasmCompiledFileFragments, { it.functionTypes.unbound }, { it.functionTypes.defined })
         bindUnboundFunctionTypes()
         bindInterfaceIds()
+    }
+
+    private fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bindFileFragments(
+        fragments: List<WasmCompiledFileFragment>,
+        unboundSelector: (WasmCompiledFileFragment) -> Map<IrSymbolType, WasmSymbolType>,
+        definedSelector: (WasmCompiledFileFragment) -> Map<IrSymbolType, WasmDeclarationType>,
+    ) {
+        val allDefined = mutableMapOf<IrSymbolType, WasmDeclarationType>()
+        fragments.forEach { allDefined.putAll(definedSelector(it)) }
+        for (fragment in fragments) {
+            val unbound = unboundSelector(fragment)
+            bind(unbound, allDefined)
+        }
     }
 
     private fun bindUnboundFunctionTypes() {
