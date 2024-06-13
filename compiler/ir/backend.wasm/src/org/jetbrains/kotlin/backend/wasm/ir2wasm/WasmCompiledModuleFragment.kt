@@ -163,11 +163,6 @@ class WasmCompiledModuleFragment(
     fun linkWasmCompiledFragments(): WasmModule {
         bindUnboundSymbols()
 
-        currentDataSectionAddress = alignUp(currentDataSectionAddress, INT_SIZE_BYTES)
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.scratchMemAddr.bind(currentDataSectionAddress)
-        }
-
         val stringDataSectionBytes = mutableListOf<Byte>()
         var stringDataSectionStart = 0
         val stringAddressAndId = mutableMapOf<String, Pair<Int, Int>>()
@@ -411,6 +406,7 @@ class WasmCompiledModuleFragment(
         bindUnboundFunctionTypes()
         bindInterfaceIds()
         bindClassIds()
+        bindScratchMemAddr()
     }
 
     private fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bindFileFragments(
@@ -460,6 +456,13 @@ class WasmCompiledModuleFragment(
         }
         wasmCompiledFileFragments.forEach { fragment ->
             bind(fragment.classIds.unbound, classIds)
+        }
+    }
+
+    private fun bindScratchMemAddr() {
+        currentDataSectionAddress = alignUp(currentDataSectionAddress, INT_SIZE_BYTES)
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.scratchMemAddr.bind(currentDataSectionAddress)
         }
     }
 }
