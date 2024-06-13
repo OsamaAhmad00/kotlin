@@ -164,21 +164,7 @@ class WasmCompiledModuleFragment(
 
     fun linkWasmCompiledFragments(): WasmModule {
         bindUnboundSymbols()
-
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.typeInfo.forEach { (referenceKey, typeInfo) ->
-                val instructions = mutableListOf<WasmInstr>()
-                WasmIrExpressionBuilder(instructions).buildConstI32(
-                    classIds.getValue(referenceKey),
-                    SourceLocation.NoLocation("Compile time data per class")
-                )
-                val typeData = WasmData(
-                    WasmDataMode.Active(0, instructions),
-                    typeInfo.toBytes()
-                )
-                data.add(typeData)
-            }
-        }
+        addClassData()
 
         val serviceCodeLocation = SourceLocation.NoLocation("Generated service code")
 
@@ -336,6 +322,23 @@ class WasmCompiledModuleFragment(
         )
         module.calculateIds()
         return module
+    }
+
+    private fun addClassData() {
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.typeInfo.forEach { (referenceKey, typeInfo) ->
+                val instructions = mutableListOf<WasmInstr>()
+                WasmIrExpressionBuilder(instructions).buildConstI32(
+                    classIds.getValue(referenceKey),
+                    SourceLocation.NoLocation("Compile time data per class")
+                )
+                val typeData = WasmData(
+                    WasmDataMode.Active(0, instructions),
+                    typeInfo.toBytes()
+                )
+                data.add(typeData)
+            }
+        }
     }
 
     private fun bindUnboundSymbols() {
