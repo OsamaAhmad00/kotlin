@@ -173,19 +173,7 @@ class WasmCompiledModuleFragment(
         bindUnboundSymbols()
         addClassData()
         createExportedFunctions()
-
-        //closureCallExports
-//        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
-//        wasmCompiledFileFragments.forEach { fragment ->
-//            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
-//                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
-//                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
-//                    WasmSymbol(wasmExportFunction)
-//                }
-//                //Rebind export function
-//                fragment.functions.unbound[exportFunction]!!.bind(symbol)
-//            }
-//        }
+        // bindClosureCallExports()
 
         //TODO Better way to resolve clashed exports (especially for adapters)
         val exportNames = mutableMapOf<String, Int>()
@@ -285,6 +273,21 @@ class WasmCompiledModuleFragment(
         )
         module.calculateIds()
         return module
+    }
+
+    private fun bindClosureCallExports() {
+        // closureCallExports
+        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
+                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
+                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
+                    WasmSymbol(wasmExportFunction)
+                }
+                //Rebind export function
+                fragment.functions.unbound[exportFunction]!!.bind(symbol)
+            }
+        }
     }
 
     private fun createExportedFunctions() {
