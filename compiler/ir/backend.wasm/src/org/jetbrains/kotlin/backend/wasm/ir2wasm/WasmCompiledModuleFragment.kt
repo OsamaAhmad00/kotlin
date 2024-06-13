@@ -65,6 +65,7 @@ class WasmCompiledModuleFragment(
     private val fieldInitializerFunction = WasmFunction.Defined("_fieldInitialize", WasmSymbol(parameterlessNoReturnFunctionType))
     private val masterInitFunction = WasmFunction.Defined("_initialize", WasmSymbol(parameterlessNoReturnFunctionType))
     private val startUnitTestsFunction = WasmFunction.Defined("kotlin.test.startUnitTests", WasmSymbol(parameterlessNoReturnFunctionType))
+    private var memory: WasmMemory = WasmMemory(WasmLimits(0U, 0U), null)
     private var currentDataSectionAddress = 0
 
     class JsCodeSnippet(val importName: WasmSymbolReadOnly<String>, val jsCode: String)
@@ -177,14 +178,7 @@ class WasmCompiledModuleFragment(
         resolveExportedFunctionsClashes()
         exports += WasmExport.Function("_initialize", masterInitFunction)
         exports += WasmExport.Function("startUnitTests", startUnitTestsFunction)
-
-        val typeInfoSize = currentDataSectionAddress
-        val memorySizeInPages = (typeInfoSize / 65_536) + 1
-        val memory = WasmMemory(WasmLimits(memorySizeInPages.toUInt(), null /* "unlimited" */))
-
-        // Need to export the memory in order to pass complex objects to the host language.
-        // Export name "memory" is a WASI ABI convention.
-        exports += WasmExport.Memory("memory", memory)
+        createAndExportMemory()
 
         val importedFunctions = wasmCompiledFileFragments.flatMap {
             it.functions.elements.filterIsInstance<WasmFunction.Imported>()
@@ -253,6 +247,16 @@ class WasmCompiledModuleFragment(
         )
         module.calculateIds()
         return module
+    }
+
+    private fun createAndExportMemory() {
+        val typeInfoSize = currentDataSectionAddress
+        val memorySizeInPages = (typeInfoSize / 65_536) + 1
+        memory = WasmMemory(WasmLimits(memorySizeInPages.toUInt(), null /* "unlimited" */))
+
+        // Need to export the memory in order to pass complex objects to the host language.
+        // Export name "memory" is a WASI ABI convention.
+        exports += WasmExport.Memory("memory", memory)
     }
 
     private fun resolveExportedFunctionsClashes() {
