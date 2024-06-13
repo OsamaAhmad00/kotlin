@@ -54,11 +54,18 @@ class WasmCompiledModuleFragment(
     private val wasmCompiledFileFragments: List<WasmCompiledFileFragment>,
     private val generateTrapsInsteadOfExceptions: Boolean,
 ) {
+    // Used during linking
+    private val serviceCodeLocation = SourceLocation.NoLocation("Generated service code")
+    private val parameterlessNoReturnFunctionType = WasmFunctionType(emptyList(), emptyList())
     private val canonicalFunctionTypes = LinkedHashMap<WasmFunctionType, WasmFunctionType>()
     private val classIds = mutableMapOf<IdSignature, Int>()
-    private var currentDataSectionAddress = 0
     private val stringDataSectionBytes = mutableListOf<Byte>()
     private val data = mutableListOf<WasmData>()
+    private val exports = mutableListOf<WasmExport<*>>()
+    private val fieldInitializerFunction = WasmFunction.Defined("_fieldInitialize", WasmSymbol(parameterlessNoReturnFunctionType))
+    private val masterInitFunction = WasmFunction.Defined("_initialize", WasmSymbol(parameterlessNoReturnFunctionType))
+    private val startUnitTestsFunction = WasmFunction.Defined("kotlin.test.startUnitTests", WasmSymbol(parameterlessNoReturnFunctionType))
+    private var currentDataSectionAddress = 0
 
     class JsCodeSnippet(val importName: WasmSymbolReadOnly<String>, val jsCode: String)
 
@@ -164,21 +171,8 @@ class WasmCompiledModuleFragment(
 
     fun linkWasmCompiledFragments(): WasmModule {
         bindUnboundSymbols()
-
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.typeInfo.forEach { (referenceKey, typeInfo) ->
-                val instructions = mutableListOf<WasmInstr>()
-                WasmIrExpressionBuilder(instructions).buildConstI32(
-                    classIds.getValue(referenceKey),
-                    SourceLocation.NoLocation("Compile time data per class")
-                )
-                val typeData = WasmData(
-                    WasmDataMode.Active(0, instructions),
-                    typeInfo.toBytes()
-                )
-                data.add(typeData)
-            }
-        }
+        addCompileTimePerClassData()
+        createExportedFunctions()
 
         val serviceCodeLocation = SourceLocation.NoLocation("Generated service code")
 
@@ -225,20 +219,6 @@ class WasmCompiledModuleFragment(
 //            }
 //        }
 
-        val startUnitTestsFunction = WasmFunction.Defined("kotlin.test.startUnitTests", WasmSymbol(parameterlessNoReturnFunctionType))
-        val startUnitTestsExport = WasmExport.Function("startUnitTests", startUnitTestsFunction)
-        with(WasmIrExpressionBuilder(startUnitTestsFunction.instructions)) {
-            wasmCompiledFileFragments.forEach { fragment ->
-                val signature = fragment.testFun
-                if (signature != null) {
-                    val testRunner = fragment.functions.defined[signature] ?: error("Cannot find symbol for test runner")
-                    buildCall(WasmSymbol(testRunner), serviceCodeLocation)
-                }
-            }
-        }
-
-        val exports = mutableListOf<WasmExport<*>>(startUnitTestsExport)
-
         //TODO Better way to resolve clashed exports (especially for adapters)
         val exportNames = mutableMapOf<String, Int>()
         wasmCompiledFileFragments.forEach { fragment ->
@@ -260,6 +240,7 @@ class WasmCompiledModuleFragment(
         }
 
         exports += WasmExport.Function("_initialize", masterInitFunction)
+        exports += WasmExport.Function("startUnitTests", startUnitTestsFunction)
 
         val typeInfoSize = currentDataSectionAddress
         val memorySizeInPages = (typeInfoSize / 65_536) + 1
@@ -336,6 +317,64 @@ class WasmCompiledModuleFragment(
         )
         module.calculateIds()
         return module
+    }
+
+    private fun createExportedFunctions() {
+        fieldInitializerFunction.instructions.clear()
+        with(WasmIrExpressionBuilder(fieldInitializerFunction.instructions)) {
+            wasmCompiledFileFragments.forEach { fragment ->
+                fragment.fieldInitializers.forEach { (field, initializer) ->
+                    val fieldSymbol = WasmSymbol(fragment.globalFields.defined[field])
+                    if (fieldSymbol.owner.name == "kotlin.wasm.internal.stringPool") {
+                        expression.add(0, WasmInstrWithoutLocation(WasmOp.GLOBAL_SET, listOf(WasmImmediate.GlobalIdx(fieldSymbol))))
+                        expression.addAll(0, initializer)
+                    } else {
+                        expression.addAll(initializer)
+                        buildSetGlobal(fieldSymbol, serviceCodeLocation)
+                    }
+                }
+            }
+        }
+
+        masterInitFunction.instructions.clear()
+        with(WasmIrExpressionBuilder(masterInitFunction.instructions)) {
+            buildCall(WasmSymbol(fieldInitializerFunction), serviceCodeLocation)
+            wasmCompiledFileFragments.forEach { fragment ->
+                fragment.mainFunctionWrappers.forEach { signature ->
+                    val wrapperFunction = fragment.functions.defined[signature] ?: error("Cannot find symbol for main wrapper")
+                    buildCall(WasmSymbol(wrapperFunction), serviceCodeLocation)
+                }
+            }
+            buildInstr(WasmOp.RETURN, serviceCodeLocation)
+        }
+
+        startUnitTestsFunction.instructions.clear()
+        with(WasmIrExpressionBuilder(startUnitTestsFunction.instructions)) {
+            wasmCompiledFileFragments.forEach { fragment ->
+                val signature = fragment.testFun
+                if (signature != null) {
+                    val testRunner = fragment.functions.defined[signature] ?: error("Cannot find symbol for test runner")
+                    buildCall(WasmSymbol(testRunner), serviceCodeLocation)
+                }
+            }
+        }
+    }
+
+    private fun addCompileTimePerClassData() {
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.typeInfo.forEach { (referenceKey, typeInfo) ->
+                val instructions = mutableListOf<WasmInstr>()
+                WasmIrExpressionBuilder(instructions).buildConstI32(
+                    classIds.getValue(referenceKey),
+                    SourceLocation.NoLocation("Compile time data per class")
+                )
+                val typeData = WasmData(
+                    WasmDataMode.Active(0, instructions),
+                    typeInfo.toBytes()
+                )
+                data.add(typeData)
+            }
+        }
     }
 
     private fun bindUnboundSymbols() {
