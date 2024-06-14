@@ -59,14 +59,9 @@ class IrFactoryImplForWasmIC(stageController: StageController) : IrFactory(stage
         return this
     }
 
-    override fun declarationSignature(declaration: IrDeclaration): IdSignature? {
-        when (declaration) {
-            is IrFunction, is IrProperty, is IrClass, is IrField, is IrEnumEntry, is IrValueParameter -> Unit
-            else -> return null
-        }
-        return declarationToSignature[declaration]
+    override fun declarationSignature(declaration: IrDeclaration): IdSignature =
+        declarationToSignature[declaration]
             ?: declaration.symbol.signature
             ?: declaration.symbol.privateSignature
             ?: error("Can't retrieve a signature for $declaration")
-    }
 }
