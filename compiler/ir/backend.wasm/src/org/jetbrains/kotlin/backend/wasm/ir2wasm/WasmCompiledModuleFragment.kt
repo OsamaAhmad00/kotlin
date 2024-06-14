@@ -190,14 +190,10 @@ class WasmCompiledModuleFragment(
         }
 
         val recGroupTypes = mutableListOf<WasmTypeDeclaration>()
-        val globals = mutableListOf<WasmGlobal>()
         wasmCompiledFileFragments.forEach { fragment ->
             recGroupTypes.addAll(fragment.vTableGcTypes.elements)
             recGroupTypes.addAll(fragment.gcTypes.elements)
             recGroupTypes.addAll(fragment.classITableGcType.unbound.values.mapNotNull { it.takeIf { it.isBound() }?.owner })
-            globals.addAll(fragment.globalFields.elements)
-            globals.addAll(fragment.globalVTables.elements)
-            globals.addAll(fragment.globalClassITables.elements.distinct())
         }
         recGroupTypes.sortBy(::wasmTypeDeclarationOrderKey)
 
@@ -232,7 +228,7 @@ class WasmCompiledModuleFragment(
             definedFunctions = definedFunctions + fieldInitializerFunction + masterInitFunction + startUnitTestsFunction,
             tables = emptyList(),
             memories = listOf(memory),
-            globals = globals,
+            globals = getGlobals(),
             exports = exports,
             startFunction = null,  // Module is initialized via export call
             elements = emptyList(),
@@ -242,6 +238,14 @@ class WasmCompiledModuleFragment(
         )
         module.calculateIds()
         return module
+    }
+
+    private fun getGlobals() = mutableListOf<WasmGlobal>().apply {
+        wasmCompiledFileFragments.forEach { fragment ->
+            addAll(fragment.globalFields.elements)
+            addAll(fragment.globalVTables.elements)
+            addAll(fragment.globalClassITables.elements.distinct())
+        }
     }
 
     private fun createAndExportMemory() {
