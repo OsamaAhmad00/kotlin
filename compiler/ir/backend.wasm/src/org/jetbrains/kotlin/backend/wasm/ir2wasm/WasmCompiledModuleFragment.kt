@@ -175,12 +175,8 @@ class WasmCompiledModuleFragment(
         addClassData()
         handleExports()
 
-        val importedFunctions = wasmCompiledFileFragments.flatMap {
-            it.functions.elements.filterIsInstance<WasmFunction.Imported>()
-        }
-
         val (recGroupTypes, nonRecursiveFunctionTypes, tags) = getTypes()
-
+        val importedFunctions = getImportedFunctions()
         val definedFunctions = wasmCompiledFileFragments.flatMap { it.functions.elements.filterIsInstance<WasmFunction.Defined>() }
 
         val module = WasmModule(
@@ -201,6 +197,10 @@ class WasmCompiledModuleFragment(
         )
         module.calculateIds()
         return module
+    }
+
+    private fun getImportedFunctions() = wasmCompiledFileFragments.flatMap {
+        it.functions.elements.filterIsInstance<WasmFunction.Imported>()
     }
 
     private fun getTypes(): WasmTypes {
