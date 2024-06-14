@@ -179,6 +179,31 @@ class WasmCompiledModuleFragment(
             it.functions.elements.filterIsInstance<WasmFunction.Imported>()
         }
 
+        val (recGroupTypes, nonRecursiveFunctionTypes, tags) = getTypes()
+
+        val definedFunctions = wasmCompiledFileFragments.flatMap { it.functions.elements.filterIsInstance<WasmFunction.Defined>() }
+
+        val module = WasmModule(
+            functionTypes = nonRecursiveFunctionTypes,
+            recGroupTypes = recGroupTypes,
+            importsInOrder = importedFunctions,
+            importedFunctions = importedFunctions,
+            definedFunctions = definedFunctions + fieldInitializerFunction + masterInitFunction + startUnitTestsFunction,
+            tables = emptyList(),
+            memories = listOf(memory),
+            globals = getGlobals(),
+            exports = exports,
+            startFunction = null,  // Module is initialized via export call
+            elements = emptyList(),
+            data = data,
+            dataCount = true,
+            tags = tags
+        )
+        module.calculateIds()
+        return module
+    }
+
+    private fun getTypes(): WasmTypes {
         fun wasmTypeDeclarationOrderKey(declaration: WasmTypeDeclaration): Int {
             return when (declaration) {
                 is WasmArrayDeclaration -> 0
@@ -218,26 +243,7 @@ class WasmCompiledModuleFragment(
             allFunctionTypes.partition { it.referencesTypeDeclarations() }
         recGroupTypes.addAll(potentiallyRecursiveFunctionTypes)
 
-        val definedFunctions = wasmCompiledFileFragments.flatMap { it.functions.elements.filterIsInstance<WasmFunction.Defined>() }
-
-        val module = WasmModule(
-            functionTypes = nonRecursiveFunctionTypes,
-            recGroupTypes = recGroupTypes,
-            importsInOrder = importedFunctions,
-            importedFunctions = importedFunctions,
-            definedFunctions = definedFunctions + fieldInitializerFunction + masterInitFunction + startUnitTestsFunction,
-            tables = emptyList(),
-            memories = listOf(memory),
-            globals = getGlobals(),
-            exports = exports,
-            startFunction = null,  // Module is initialized via export call
-            elements = emptyList(),
-            data = data,
-            dataCount = true,
-            tags = tags
-        )
-        module.calculateIds()
-        return module
+        return WasmTypes(recGroupTypes, nonRecursiveFunctionTypes, tags)
     }
 
     private fun getGlobals() = mutableListOf<WasmGlobal>().apply {
@@ -508,6 +514,12 @@ class WasmCompiledModuleFragment(
             }
         }
     }
+
+    private data class WasmTypes(
+        val recGroupTypes: List<WasmTypeDeclaration>,
+        val nonRecursiveFunctionTypes: List<WasmFunctionType>,
+        val tags: List<WasmTag>
+    )
 }
 
 fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bind(
