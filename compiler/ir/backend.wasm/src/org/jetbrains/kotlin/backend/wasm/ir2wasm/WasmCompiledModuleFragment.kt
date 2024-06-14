@@ -523,16 +523,26 @@ class WasmCompiledModuleFragment(
      *  [org.jetbrains.kotlin.backend.wasm.lower.JsInteropFunctionsLowering]
      */
     private fun bindClosureCallsToSingleAdapterAcrossFiles() {
-        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
+        val existingClosureCallAdapters = mutableMapOf<String, WasmSymbol<WasmFunction>>()
         wasmCompiledFileFragments.forEach { fragment ->
-            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
-                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
-                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
-                    WasmSymbol(wasmExportFunction)
+            fragment.closureCallExports.forEach { (signatureString, idSignature) ->
+                var symbol = existingClosureCallAdapters[signatureString]
+                if (symbol == null) {
+                    // First occurrence of the adapter, register it.
+                    symbol = WasmSymbol(fragment.functions.defined[idSignature] ?: error("Can't find adapter function"))
+                    existingClosureCallAdapters[signatureString] = symbol
+                } else {
+                    // Adapter already exists, remove this one and use the existing adapter.
+                    fragment.functions.apply {
+                        val duplicate = defined.remove(idSignature) ?: error("Can't remove duplicate adapter function")
+                        elements.remove(duplicate)
+                        wasmToIr.remove(duplicate)
+                        fragment.exports.removeAll { it.field == duplicate }
+                    }
                 }
-                // Rebind export function
+                // Rebind adapter function to the single instance
                 // There might not be any unbound references in case it's called only from JS side
-                fragment.functions.unbound[exportFunction]?.bind(symbol)
+                fragment.functions.unbound[idSignature]?.bind(symbol)
             }
         }
     }
