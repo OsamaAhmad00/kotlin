@@ -204,24 +204,7 @@ class WasmCompiledModuleFragment(
     }
 
     private fun getTypes(): WasmTypes {
-        fun wasmTypeDeclarationOrderKey(declaration: WasmTypeDeclaration): Int {
-            return when (declaration) {
-                is WasmArrayDeclaration -> 0
-                is WasmFunctionType -> 0
-                is WasmStructDeclaration ->
-                    // Subtype depth
-                    declaration.superType?.let { wasmTypeDeclarationOrderKey(it.owner) + 1 } ?: 0
-            }
-        }
-
-        val recGroupTypes = mutableListOf<WasmTypeDeclaration>()
-        wasmCompiledFileFragments.forEach { fragment ->
-            recGroupTypes.addAll(fragment.vTableGcTypes.elements)
-            recGroupTypes.addAll(fragment.gcTypes.elements)
-            recGroupTypes.addAll(fragment.classITableGcType.unbound.values.mapNotNull { it.takeIf { it.isBound() }?.owner })
-        }
-        recGroupTypes.sortBy(::wasmTypeDeclarationOrderKey)
-
+        val recGroupTypes = getRecGroupTypesWithoutPotentiallyRecursiveFunctionTypes()
         //OPT
         //TODO(FIND THROWABLE)
         val throwableDeclaration = wasmCompiledFileFragments.firstNotNullOfOrNull { fragment ->
@@ -244,6 +227,27 @@ class WasmCompiledModuleFragment(
         recGroupTypes.addAll(potentiallyRecursiveFunctionTypes)
 
         return WasmTypes(recGroupTypes, nonRecursiveFunctionTypes, tags)
+    }
+
+    private fun getRecGroupTypesWithoutPotentiallyRecursiveFunctionTypes(): MutableList<WasmTypeDeclaration> {
+        fun wasmTypeDeclarationOrderKey(declaration: WasmTypeDeclaration): Int {
+            return when (declaration) {
+                is WasmArrayDeclaration -> 0
+                is WasmFunctionType -> 0
+                is WasmStructDeclaration ->
+                    // Subtype depth
+                    declaration.superType?.let { wasmTypeDeclarationOrderKey(it.owner) + 1 } ?: 0
+            }
+        }
+
+        val recGroupTypes = mutableListOf<WasmTypeDeclaration>()
+        wasmCompiledFileFragments.forEach { fragment ->
+            recGroupTypes.addAll(fragment.vTableGcTypes.elements)
+            recGroupTypes.addAll(fragment.gcTypes.elements)
+            recGroupTypes.addAll(fragment.classITableGcType.unbound.values.mapNotNull { it.takeIf { it.isBound() }?.owner })
+        }
+        recGroupTypes.sortBy(::wasmTypeDeclarationOrderKey)
+        return recGroupTypes
     }
 
     private fun getGlobals() = mutableListOf<WasmGlobal>().apply {
