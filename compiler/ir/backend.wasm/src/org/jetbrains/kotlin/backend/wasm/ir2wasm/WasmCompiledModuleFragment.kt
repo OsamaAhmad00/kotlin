@@ -205,28 +205,31 @@ class WasmCompiledModuleFragment(
 
     private fun getTypes(): WasmTypes {
         val recGroupTypes = getRecGroupTypesWithoutPotentiallyRecursiveFunctionTypes()
+
+        val tagFuncType = getTagFunctionType()
+        val tags = if (generateTrapsInsteadOfExceptions) emptyList() else listOf(WasmTag(tagFuncType))
+
+        val allFunctionTypes = canonicalFunctionTypes.values.toList() + tagFuncType + parameterlessNoReturnFunctionType
+
+        // Partition out function types that can't be recursive that don't need to be put into a
+        //  rec group so that they can be matched with function types from other Wasm modules.
+        val (potentiallyRecursiveFunctionTypes, nonRecursiveFunctionTypes) = allFunctionTypes.partition { it.referencesTypeDeclarations() }
+        recGroupTypes.addAll(potentiallyRecursiveFunctionTypes)
+
+        return WasmTypes(recGroupTypes, nonRecursiveFunctionTypes, tags)
+    }
+
+    private fun getTagFunctionType(): WasmFunctionType {
         //OPT
         //TODO(FIND THROWABLE)
         val throwableDeclaration = wasmCompiledFileFragments.firstNotNullOfOrNull { fragment ->
             fragment.gcTypes.defined.values.find { it.name == "kotlin.Throwable" }
         }
         check(throwableDeclaration != null)
-        val tagFuncType = WasmFunctionType(
+        return WasmFunctionType(
             listOf(WasmRefNullType(WasmHeapType.Type(WasmSymbol(throwableDeclaration)))),
             emptyList()
         )
-        val tags = if (generateTrapsInsteadOfExceptions) emptyList() else listOf(WasmTag(tagFuncType))
-
-        val allFunctionTypes = canonicalFunctionTypes.values.toList() + tagFuncType + parameterlessNoReturnFunctionType
-
-        // Partition out function types that can't be recursive,
-        // we don't need to put them into a rec group
-        // so that they can be matched with function types from other Wasm modules.
-        val (potentiallyRecursiveFunctionTypes, nonRecursiveFunctionTypes) =
-            allFunctionTypes.partition { it.referencesTypeDeclarations() }
-        recGroupTypes.addAll(potentiallyRecursiveFunctionTypes)
-
-        return WasmTypes(recGroupTypes, nonRecursiveFunctionTypes, tags)
     }
 
     private fun getRecGroupTypesWithoutPotentiallyRecursiveFunctionTypes(): MutableList<WasmTypeDeclaration> {
