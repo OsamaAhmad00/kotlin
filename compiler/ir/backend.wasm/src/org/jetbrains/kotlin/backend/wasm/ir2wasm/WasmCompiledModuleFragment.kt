@@ -177,14 +177,13 @@ class WasmCompiledModuleFragment(
 
         val (recGroupTypes, nonRecursiveFunctionTypes, tags) = getTypes()
         val importedFunctions = getImportedFunctions()
-        val definedFunctions = wasmCompiledFileFragments.flatMap { it.functions.elements.filterIsInstance<WasmFunction.Defined>() }
 
-        val module = WasmModule(
+        return WasmModule(
             functionTypes = nonRecursiveFunctionTypes,
             recGroupTypes = recGroupTypes,
             importsInOrder = importedFunctions,
             importedFunctions = importedFunctions,
-            definedFunctions = definedFunctions + fieldInitializerFunction + masterInitFunction + startUnitTestsFunction,
+            definedFunctions = getDefinedFunctions(),
             tables = emptyList(),
             memories = listOf(memory),
             globals = getGlobals(),
@@ -194,10 +193,12 @@ class WasmCompiledModuleFragment(
             data = data,
             dataCount = true,
             tags = tags
-        )
-        module.calculateIds()
-        return module
+        ).apply { calculateIds() }
     }
+
+    private fun getDefinedFunctions() = wasmCompiledFileFragments.flatMap {
+        it.functions.elements.filterIsInstance<WasmFunction.Defined>()
+    } + fieldInitializerFunction + masterInitFunction + startUnitTestsFunction
 
     private fun getImportedFunctions() = wasmCompiledFileFragments.flatMap {
         it.functions.elements.filterIsInstance<WasmFunction.Imported>()
