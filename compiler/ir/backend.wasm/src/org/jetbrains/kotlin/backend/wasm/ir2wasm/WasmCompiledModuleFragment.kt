@@ -294,21 +294,6 @@ class WasmCompiledModuleFragment(
         }
     }
 
-    private fun bindClosureCallExports() {
-        // closureCallExports
-        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
-        wasmCompiledFileFragments.forEach { fragment ->
-            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
-                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
-                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
-                    WasmSymbol(wasmExportFunction)
-                }
-                //Rebind export function
-                fragment.functions.unbound[exportFunction]!!.bind(symbol)
-            }
-        }
-    }
-
     private fun handleExports() {
         // The clashes are resolved first because clashes are currently resolved by renaming functions and
         //  this will be problematic for the exported functions that are expected to be with an exact name
@@ -399,6 +384,7 @@ class WasmCompiledModuleFragment(
         bindStringPoolSymbols()
         bindConstantArrayDataSegmentIds()
         bindUniqueJsFunNames()
+        bindClosureCallsToSingleAdapterAcrossFiles()
     }
 
     private fun <IrSymbolType, WasmDeclarationType : Any, WasmSymbolType : WasmSymbol<WasmDeclarationType>> bindFileFragments(
@@ -519,6 +505,34 @@ class WasmCompiledModuleFragment(
                 jsCodeCounter[jsFunName] = counterValue + 1
                 val counterSuffix = if (counterValue == 0 && jsFunName.lastOrNull()?.isDigit() == false) "" else "_$counterValue"
                 symbol.bind("$jsFunName$counterSuffix")
+            }
+        }
+    }
+
+    /**
+     * private fun foo(f: (String) -> String): String = js("f() + 1")
+     * private fun bar(h: (String) -> String): String = js("h() + 2")
+     * For the two functions above, an adapter for the closures f and h will be
+     *  created for them to be callable from JS code. Since the signature of both
+     *  f and h are the same, the same adapter will be used for both of them. This
+     *  is fine within a single file, but when dealing with multiple files, it's a
+     *  problem if the same adapter is defined more than once.
+     * Given that adapters with same signature are similar across files, this function
+     *  binds all calls to a closure adapter in all file fragments to a single adapter.
+     * For more details about the per-file adapter generation, take a look at
+     *  [org.jetbrains.kotlin.backend.wasm.lower.JsInteropFunctionsLowering]
+     */
+    private fun bindClosureCallsToSingleAdapterAcrossFiles() {
+        val visitedClosureCallExports = mutableMapOf<String, WasmSymbol<WasmFunction>>()
+        wasmCompiledFileFragments.forEach { fragment ->
+            fragment.closureCallExports.forEach { (exportSignature, exportFunction) ->
+                val symbol = visitedClosureCallExports.getOrPut(exportSignature) {
+                    val wasmExportFunction = fragment.functions.defined[exportFunction] ?: error("Cannot find export function")
+                    WasmSymbol(wasmExportFunction)
+                }
+                // Rebind export function
+                // There might not be any unbound references in case it's called only from JS side
+                fragment.functions.unbound[exportFunction]?.bind(symbol)
             }
         }
     }
