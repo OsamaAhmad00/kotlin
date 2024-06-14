@@ -173,12 +173,7 @@ class WasmCompiledModuleFragment(
     fun linkWasmCompiledFragments(): WasmModule {
         bindUnboundSymbols()
         addClassData()
-        createExportedFunctions()
-        // bindClosureCallExports()
-        resolveExportedFunctionsClashes()
-        exports += WasmExport.Function("_initialize", masterInitFunction)
-        exports += WasmExport.Function("startUnitTests", startUnitTestsFunction)
-        createAndExportMemory()
+        handleExports()
 
         val importedFunctions = wasmCompiledFileFragments.flatMap {
             it.functions.elements.filterIsInstance<WasmFunction.Imported>()
@@ -296,9 +291,15 @@ class WasmCompiledModuleFragment(
         }
     }
 
-    private fun createExportedFunctions() {
+    private fun handleExports() {
+        // The clashes are resolved first because clashes are currently resolved by renaming functions and
+        //  this will be problematic for the exported functions that are expected to be with an exact name
+        resolveExportedFunctionsClashes()
         createMasterInitFunction()
         createStartUnitTestsFunction()
+        exports += WasmExport.Function("_initialize", masterInitFunction)
+        exports += WasmExport.Function("startUnitTests", startUnitTestsFunction)
+        createAndExportMemory()
     }
 
     private fun createMasterInitFunction() {
