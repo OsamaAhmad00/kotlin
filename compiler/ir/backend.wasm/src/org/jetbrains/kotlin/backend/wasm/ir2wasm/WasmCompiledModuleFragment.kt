@@ -525,18 +525,18 @@ class WasmCompiledModuleFragment(
     private fun bindClosureCallsToSingleAdapterAcrossFiles() {
         val existingClosureCallAdapters = mutableMapOf<String, WasmSymbol<WasmFunction>>()
         wasmCompiledFileFragments.forEach { fragment ->
-            fragment.closureCallExports.forEach { (signatureString, idSignature) ->
+            for ((signatureString, idSignature) in fragment.closureCallExports) {
                 var symbol = existingClosureCallAdapters[signatureString]
                 if (symbol == null) {
-                    // First occurrence of the adapter, register it.
-                    symbol = WasmSymbol(fragment.functions.defined[idSignature] ?: error("Can't find adapter function"))
+                    // First occurrence of the adapter, register it (if not removed by DCE).
+                    val func = fragment.functions.defined[idSignature] ?: continue
+                    symbol = WasmSymbol(func)
                     existingClosureCallAdapters[signatureString] = symbol
                 } else {
                     // Adapter already exists, remove this one and use the existing adapter.
-                    fragment.functions.apply {
-                        val duplicate = defined.remove(idSignature) ?: error("Can't remove duplicate adapter function")
-                        elements.remove(duplicate)
-                        wasmToIr.remove(duplicate)
+                    fragment.functions.defined.remove(idSignature)?.let { duplicate ->
+                        fragment.functions.elements.remove(duplicate)
+                        fragment.functions.wasmToIr.remove(duplicate)
                         fragment.exports.removeAll { it.field == duplicate }
                     }
                 }
