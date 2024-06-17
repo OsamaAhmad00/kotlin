@@ -54,7 +54,16 @@ class IrFactoryImplForWasmIC(stageController: StageController) : IrFactory(stage
     override fun <T : IrDeclaration> T.declarationCreated(): T {
         val parentSig = stageController.currentDeclaration?.let { declarationSignature(it) } ?: return this
 
-        stageController.createSignature(parentSig)?.let { declarationToSignature[this] = it }
+        var hash: Hash128Bits? = null
+        if (stageController.computeHash && this is IrClass) {
+            val hashCalculator = HashCalculatorForIC()
+            hashCalculator.update(this)
+            // TODO remove this
+            val h = hashCalculator.finalizeAndGetHash().hash
+            hash = Hash128Bits(h.lowBytes, h.highBytes)
+        }
+
+        stageController.createSignature(parentSig, hash)?.let { declarationToSignature[this] = it }
 
         return this
     }

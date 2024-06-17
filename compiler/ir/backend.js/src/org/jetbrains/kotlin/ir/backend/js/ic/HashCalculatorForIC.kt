@@ -45,7 +45,7 @@ value class ICHash(val hash: Hash128Bits = Hash128Bits()) {
     }
 }
 
-private class HashCalculatorForIC {
+class HashCalculatorForIC {
     private val md5Digest = MessageDigest.getInstance("MD5")
 
     fun update(data: ByteArray) = md5Digest.update(data)

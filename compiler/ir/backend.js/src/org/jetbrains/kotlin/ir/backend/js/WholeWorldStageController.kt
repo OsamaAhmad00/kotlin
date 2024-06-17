@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.ir.backend.js
 
+import org.jetbrains.kotlin.ir.declarations.Hash128Bits
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.StageController
 import org.jetbrains.kotlin.ir.util.IdSignature
@@ -12,6 +13,7 @@ import org.jetbrains.kotlin.ir.util.IdSignature
 // Only allows to apply a lowering to the whole world and save the result
 class WholeWorldStageController : StageController() {
     override var currentStage: Int = 0
+    override var computeHash: Boolean = false;
 
     // TODO assert lowered
 
@@ -46,7 +48,7 @@ class WholeWorldStageController : StageController() {
         }
     }
 
-    override fun createSignature(parentSignature: IdSignature): IdSignature {
-        return IdSignature.LoweredDeclarationSignature(parentSignature, currentStage, index++)
+    override fun createSignature(parentSignature: IdSignature, hash: Hash128Bits?): IdSignature {
+        return IdSignature.LoweredDeclarationSignature(parentSignature, currentStage, index++, hash)
     }
 }

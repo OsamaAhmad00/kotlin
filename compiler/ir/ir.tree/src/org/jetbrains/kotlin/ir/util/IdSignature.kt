@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.ir.util
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
+import org.jetbrains.kotlin.ir.declarations.Hash128Bits
 import org.jetbrains.kotlin.ir.symbols.IrFileSymbol
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.ir.util.render as newRender
@@ -616,7 +617,7 @@ sealed class IdSignature {
     /**
      * A special signature to reference lowered declarations in PIR incremental cache.
      */
-    class LoweredDeclarationSignature(val original: IdSignature, val stage: Int, val index: Int) : IdSignature() {
+    class LoweredDeclarationSignature(val original: IdSignature, val stage: Int, val index: Int, val hash: Hash128Bits? = null) : IdSignature() {
         override val isPubliclyVisible: Boolean get() = original.isPubliclyVisible
 
         override val hasTopLevel: Boolean get() = true
@@ -631,7 +632,7 @@ sealed class IdSignature {
         override fun packageFqName(): FqName = original.packageFqName()
 
         override fun equals(other: Any?): Boolean {
-            return other is LoweredDeclarationSignature && original == other.original && stage == other.stage && index == other.index
+            return other is LoweredDeclarationSignature && original == other.original && stage == other.stage && index == other.index && hash == other.hash
         }
 
         private val hashCode = (index * 31 + stage) * 31 + original.hashCode()
