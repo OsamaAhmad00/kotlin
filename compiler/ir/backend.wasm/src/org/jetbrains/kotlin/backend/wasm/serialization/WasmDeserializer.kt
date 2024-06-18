@@ -29,7 +29,12 @@ import kotlin.collections.LinkedHashSet
  *  use [deserializeReference]
  */
 
-class WasmDeserializer(inputStream: InputStream, private val skipLocalNames: Boolean = false, private val skipSourceLocations: Boolean) {
+class WasmDeserializer(
+    inputStream: InputStream,
+    private val fileSignature: IdSignature.FileSignature,
+    private val skipLocalNames: Boolean = false,
+    private val skipSourceLocations: Boolean
+) {
 
     private val input: MyByteReader = MyByteReader(inputStream)
 
@@ -411,7 +416,7 @@ class WasmDeserializer(inputStream: InputStream, private val skipLocalNames: Boo
                 5 -> deserializeLoweredDeclarationSignature()
                 6 -> deserializeScopeLocalDeclaration()
                 7 -> deserializeSpecialFakeOverrideSignature()
-                8 -> IdSignature.FileSignature(0, FqName(""), "")
+                8 -> fileSignature
                 else -> tagError()
             }
         }

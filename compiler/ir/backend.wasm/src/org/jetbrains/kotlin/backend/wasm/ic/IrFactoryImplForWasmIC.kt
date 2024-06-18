@@ -26,8 +26,13 @@ open class WasmICContext(
     override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
         WasmCompilerWithIC(mainModule, configuration, allowIncompleteImplementations)
 
-    override fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File?): SrcFileArtifact =
-        WasmSrcFileArtifact(srcFilePath, fragments as? WasmIrProgramFragments, astArtifact, skipLocalNames, skipSourceLocations)
+    override fun createSrcFileArtifact(
+        srcFilePath: String,
+        signature: IdSignature.FileSignature,
+        fragments: IrProgramFragments?,
+        astArtifact: File?
+    ): SrcFileArtifact =
+        WasmSrcFileArtifact(srcFilePath, signature, fragments as? WasmIrProgramFragments, astArtifact, skipLocalNames, skipSourceLocations)
 
     override fun createModuleArtifact(
         moduleName: String,
@@ -36,7 +41,13 @@ open class WasmICContext(
         forceRebuildJs: Boolean,
         externalModuleName: String?,
     ): ModuleArtifact =
-        WasmModuleArtifact(moduleName, fileArtifacts.map { it as WasmSrcFileArtifact }, artifactsDir, forceRebuildJs, externalModuleName)
+        WasmModuleArtifact(
+            moduleName,
+            fileArtifacts.map { it as WasmSrcFileArtifact },
+            artifactsDir,
+            forceRebuildJs,
+            externalModuleName
+        )
 }
 
 class WasmICContextForTesting(

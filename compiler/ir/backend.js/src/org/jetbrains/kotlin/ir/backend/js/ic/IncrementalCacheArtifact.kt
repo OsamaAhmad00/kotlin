@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.ir.backend.js.ic
 
+import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.konan.file.use
 import org.jetbrains.kotlin.utils.newHashSetWithExpectedSize
 import java.io.BufferedOutputStream
@@ -52,6 +53,7 @@ internal class IncrementalCacheArtifact(
     private val forceRebuildJs: Boolean,
     private val srcCacheActions: List<SourceFileCacheArtifact>,
     private val externalModuleName: String?,
+    private val fileSignatures: Map<String, IdSignature.FileSignature>
 ) {
     fun getSourceFiles() = srcCacheActions.mapTo(newHashSetWithExpectedSize(srcCacheActions.size)) { it.srcFile }
 
@@ -66,7 +68,12 @@ internal class IncrementalCacheArtifact(
                 srcFileAction.commitBinaryAst(rebuiltFileFragment, icContext)
             }
             srcFileAction.commitMetadata()
-            icContext.createSrcFileArtifact(srcFileAction.srcFile.path, rebuiltFileFragment, srcFileAction.binaryAstFile)
+            icContext.createSrcFileArtifact(
+                srcFileAction.srcFile.path,
+                fileSignatures[srcFileAction.srcFile.path]!!,
+                rebuiltFileFragment,
+                srcFileAction.binaryAstFile
+            )
         }
         return icContext.createModuleArtifact(moduleName, fileArtifacts, artifactsDir, forceRebuildJs, externalModuleName)
     }

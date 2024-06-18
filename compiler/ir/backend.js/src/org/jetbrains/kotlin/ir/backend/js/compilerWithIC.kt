@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFactory
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrFactoryImplForJsIC
+import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi2ir.descriptors.IrBuiltInsOverDescriptors
@@ -36,7 +37,12 @@ class JsICContext(
     override fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface =
         JsIrCompilerWithIC(mainModule, mainArguments, configuration, granularity, phaseConfig, exportedDeclarations)
 
-    override fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File?): SrcFileArtifact =
+    override fun createSrcFileArtifact(
+        srcFilePath: String,
+        signature: IdSignature.FileSignature,
+        fragments: IrProgramFragments?,
+        astArtifact: File?
+    ): SrcFileArtifact =
         JsSrcFileArtifact(srcFilePath, fragments as? JsIrProgramFragments, astArtifact)
 
     override fun createModuleArtifact(

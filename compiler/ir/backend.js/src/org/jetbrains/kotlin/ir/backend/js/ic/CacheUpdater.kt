@@ -69,7 +69,12 @@ interface PlatformDependentICContext {
      */
     fun createCompiler(mainModule: IrModuleFragment, configuration: CompilerConfiguration): IrCompilerICInterface
 
-    fun createSrcFileArtifact(srcFilePath: String, fragments: IrProgramFragments?, astArtifact: File? = null): SrcFileArtifact
+    fun createSrcFileArtifact(
+        srcFilePath: String,
+        signature: IdSignature.FileSignature,
+        fragments: IrProgramFragments?,
+        astArtifact: File? = null
+    ): SrcFileArtifact
 
     fun createModuleArtifact(
         moduleName: String,
@@ -638,8 +643,9 @@ class CacheUpdater(
                 val incrementalCache = getLibIncrementalCache(libFile)
                 val providers = loadedIr.getSignatureProvidersForLib(libFile)
                 val signatureToIndexMapping = providers.associate { it.srcFile to it.getSignatureToIndexMapping() }
+                val fileSignatures = providers.associate { it.srcFile.path to IdSignature.FileSignature(it.irFile.symbol) }
 
-                val cacheArtifact = incrementalCache.buildAndCommitCacheArtifact(signatureToIndexMapping, stubbedSignatures)
+                val cacheArtifact = incrementalCache.buildAndCommitCacheArtifact(signatureToIndexMapping, stubbedSignatures, fileSignatures)
 
                 val libFragment = loadedIr.loadedFragments[libFile] ?: notFoundIcError("loaded fragment", libFile)
                 val sourceNames = loadedIr.getIrFileNames(libFragment)

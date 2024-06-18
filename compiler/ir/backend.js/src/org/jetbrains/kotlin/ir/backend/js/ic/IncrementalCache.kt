@@ -94,7 +94,8 @@ internal class IncrementalCache(private val library: KotlinLibraryHeader, val ca
 
     fun buildAndCommitCacheArtifact(
         signatureToIndexMapping: Map<KotlinSourceFile, Map<IdSignature, Int>>,
-        stubbedSignatures: Set<IdSignature>
+        stubbedSignatures: Set<IdSignature>,
+        fileSignatures: Map<String, IdSignature.FileSignature>
     ): IncrementalCacheArtifact {
         val klibSrcFiles = if (cacheHeaderShouldBeUpdated) {
             val newCacheHeader = CacheHeader(library)
@@ -127,7 +128,7 @@ internal class IncrementalCache(private val library: KotlinLibraryHeader, val ca
 
         commitFilesWithStubbedSignatures(updatedFilesWithStubbedSignatures, signatureToIndexMapping)
 
-        return IncrementalCacheArtifact(cacheDir, removedSrcFiles.isNotEmpty(), fileArtifacts, library.jsOutputName)
+        return IncrementalCacheArtifact(cacheDir, removedSrcFiles.isNotEmpty(), fileArtifacts, library.jsOutputName, fileSignatures)
     }
 
     data class ModifiedFiles(

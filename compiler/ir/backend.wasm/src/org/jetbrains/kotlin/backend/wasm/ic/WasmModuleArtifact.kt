@@ -8,12 +8,14 @@ package org.jetbrains.kotlin.backend.wasm.ic
 import org.jetbrains.kotlin.backend.wasm.serialization.WasmDeserializer
 import org.jetbrains.kotlin.ir.backend.js.ic.*
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.safeModuleName
+import org.jetbrains.kotlin.ir.util.IdSignature
 import java.io.File
 
 internal inline fun <T> File.ifExists(f: File.() -> T): T? = if (exists()) f() else null
 
 class WasmSrcFileArtifact(
     val srcFilePath: String,
+    val signature: IdSignature.FileSignature,
     private val fragments: WasmIrProgramFragments?,
     private val astArtifact: File? = null,
     private val skipLocalNames: Boolean = false,
@@ -24,7 +26,16 @@ class WasmSrcFileArtifact(
             return fragments
         }
         return astArtifact?.ifExists { readBytes() }
-            ?.let { WasmIrProgramFragments(WasmDeserializer(it.inputStream(), skipLocalNames, skipSourceLocations).deserialize()) }
+            ?.let {
+                WasmIrProgramFragments(
+                    WasmDeserializer(
+                        it.inputStream(),
+                        signature,
+                        skipLocalNames,
+                        skipSourceLocations
+                    ).deserialize()
+                )
+            }
     }
 
     override fun isModified() = fragments != null
