@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.ir.declarations.IdSignatureRetriever
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.util.IdSignature
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 
 class WasmModuleFragmentGenerator(
@@ -40,7 +41,7 @@ internal fun compileIrFile(
     wasmModuleMetadataCache: WasmModuleMetadataCache,
     allowIncompleteImplementations: Boolean
 ): WasmCompiledFileFragment {
-    val wasmFileFragment = WasmCompiledFileFragment()
+    val wasmFileFragment = WasmCompiledFileFragment(IdSignature.FileSignature(irFile.symbol))
     val wasmFileCodegenContext = WasmFileCodegenContext(wasmFileFragment, idSignatureRetriever)
     val wasmModuleTypeTransformer = WasmModuleTypeTransformer(backendContext, wasmFileCodegenContext)
 

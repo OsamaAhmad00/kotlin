@@ -580,6 +580,7 @@ class WasmDeserializer(
         }
 
     private fun deserializeCompiledFileFragment() = WasmCompiledFileFragment(
+        fileSignature = fileSignature,
         functions = deserializeFunctions(),
         globalFields = deserializeGlobalFields(),
         globalVTables = deserializeGlobalVTables(),

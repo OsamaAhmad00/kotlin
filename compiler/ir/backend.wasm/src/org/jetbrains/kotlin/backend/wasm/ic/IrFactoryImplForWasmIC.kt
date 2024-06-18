@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.ir.backend.js.WholeWorldStageController
 import org.jetbrains.kotlin.ir.backend.js.ic.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.util.IdSignature
+import org.jetbrains.kotlin.wasm.ir.WasmTypeDeclaration
 import java.io.File
 import java.util.*
 
@@ -48,6 +49,48 @@ open class WasmICContext(
             forceRebuildJs,
             externalModuleName
         )
+
+    @Suppress("UNCHECKED_CAST")
+    override fun patchInlineDefinitions(rebuiltFragments: Collection<IrProgramFragments>) {
+        // When serializing, file signatures are ignored, and when deserializing, all file signatures
+        //  are assigned to the signature of the file being deserialized. Thus, copying the definition
+        //  with whatever file signature is equivalent to copying the definition and changing file
+        //  signatures to the signature of this file.
+        // TODO You can't just copy the signature and because it might clash with definitions already in this file.
+        //  Copy the signature and make sure it's unique and won't cause clashes.
+
+        fun isExternalInlinedSignature(signature: IdSignature, fileSignature: IdSignature.FileSignature) : Boolean{
+            fun IdSignature.hasExternalFileSignature(): Boolean =
+                when (this) {
+                    is IdSignature.AccessorSignature -> propertySignature.hasExternalFileSignature()
+                    is IdSignature.CompositeSignature -> container.hasExternalFileSignature() || inner.hasExternalFileSignature()
+                    is IdSignature.FileLocalSignature -> container.hasExternalFileSignature()
+                    is IdSignature.LoweredDeclarationSignature -> original.hasExternalFileSignature()
+                    is IdSignature.FileSignature -> this != fileSignature
+                    else -> false
+                }
+            return signature.hasExternalFileSignature()
+        }
+
+        fun copyInlinedDefinitions(fragments: Collection<WasmIrProgramFragments>) {
+            val allDefined = mutableMapOf<IdSignature, WasmTypeDeclaration>()
+            fragments.forEach { allDefined.putAll(it.mainFragment.gcTypes.defined) }
+            for (fragment in fragments) {
+                val unbound = fragment.mainFragment.gcTypes.unbound
+                val defined = fragment.mainFragment.gcTypes.defined
+                unbound.forEach { (idSignature, _) ->
+                    if (isExternalInlinedSignature(idSignature, fragment.mainFragment.fileSignature)) {
+                        allDefined[idSignature]?.let {
+                            defined[idSignature] = it
+                        }
+                    }
+                }
+            }
+        }
+
+        val rebuiltWasmFragments = rebuiltFragments as Collection<WasmIrProgramFragments>
+        copyInlinedDefinitions(rebuiltWasmFragments)
+    }
 }
 
 class WasmICContextForTesting(

@@ -83,6 +83,10 @@ interface PlatformDependentICContext {
         forceRebuildJs: Boolean = false,
         externalModuleName: String? = null
     ): ModuleArtifact
+
+    fun patchInlineDefinitions(rebuiltFragments: Collection<IrProgramFragments>) {
+        /* FIXME remove this and fix Wasm inlining */
+    }
 }
 
 /**
@@ -668,6 +672,8 @@ class CacheUpdater(
         moduleNames: Map<KotlinLibraryFile, String>,
         rebuiltFileFragments: KotlinSourceFileMap<IrProgramFragments>
     ): List<ModuleArtifact> = stopwatch.measure("Incremental cache - committing artifacts") {
+        val allRebuiltFragments = rebuiltFileFragments.values.flatMap { it.values.toList() }
+        icContext.patchInlineDefinitions(allRebuiltFragments)
         incrementalCacheArtifacts.map { (libFile, incrementalCacheArtifact) ->
             incrementalCacheArtifact.buildModuleArtifactAndCommitCache(
                 moduleName = moduleNames[libFile] ?: notFoundIcError("module name", libFile),
