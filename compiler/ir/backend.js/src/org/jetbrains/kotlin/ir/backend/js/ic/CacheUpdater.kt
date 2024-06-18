@@ -816,7 +816,7 @@ class CacheUpdater(
     /**
      * This method performs the following routine:
      *  - Estimates dirty files that must be relowered;
-     *  - Creates a compiler instance by calling [compilerInterfaceFactory];
+     *  - Creates a compiler instance by calling [PlatformDependentICContext.createCompiler];
      *  - Runs the compiler (lowering pipeline) for the dirty files (see [IrCompilerICInterface]);
      *  - Transforms lowered IR to JS AST fragments [IrProgramFragments];
      *  - Saves the cache data on the disk.
