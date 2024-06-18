@@ -51,19 +51,19 @@ class WasmICContextForTesting(
 class IrFactoryImplForWasmIC(stageController: StageController) : IrFactory(stageController), IdSignatureRetriever {
     private val declarationToSignature = WeakHashMap<IrDeclaration, IdSignature>()
 
+    private fun <T : IrDeclaration> T.computeHashIfNeeded(): Hash128Bits? {
+        if (!stageController.insideInlineFunction || this !is IrClass) return null
+        val hashCalculator = HashCalculatorForIC()
+        hashCalculator.update(this)
+        hashCalculator.finalizeAndGetHash().hash.run {
+            return Hash128Bits(lowBytes, highBytes)
+        }
+    }
+
     override fun <T : IrDeclaration> T.declarationCreated(): T {
         val parentSig = stageController.currentDeclaration?.let { declarationSignature(it) } ?: return this
 
-        var hash: Hash128Bits? = null
-        if (stageController.computeHash && this is IrClass) {
-            val hashCalculator = HashCalculatorForIC()
-            hashCalculator.update(this)
-            // TODO remove this
-            val h = hashCalculator.finalizeAndGetHash().hash
-            hash = Hash128Bits(h.lowBytes, h.highBytes)
-        }
-
-        stageController.createSignature(parentSig, hash)?.let { declarationToSignature[this] = it }
+        stageController.createSignature(parentSig, computeHashIfNeeded())?.let { declarationToSignature[this] = it }
 
         return this
     }

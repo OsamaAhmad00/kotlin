@@ -13,7 +13,6 @@ import org.jetbrains.kotlin.ir.util.IdSignature
 // Only allows to apply a lowering to the whole world and save the result
 class WholeWorldStageController : StageController() {
     override var currentStage: Int = 0
-    override var computeHash: Boolean = false;
 
     // TODO assert lowered
 
