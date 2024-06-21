@@ -33,7 +33,7 @@ public class FirWasmInvalidationPerFileTestGenerated extends AbstractFirWasmInva
 
   @Test
   public void testAllFilesPresentInInvalidation() {
-    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/incremental/invalidation"), Pattern.compile("^([^_](.+))$"), Pattern.compile("abstractClassWithJsExport|classWithJsExport|inlineFunctionAnnotations|interfaceWithJsExport|jsExportWithMultipleFiles|typeScriptExportsPerFile|typeScriptExportsPerModule"), TargetBackend.WASM, false);
+    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/incremental/invalidation"), Pattern.compile("^([^_](.+))$"), Pattern.compile("abstractClassWithJsExport|classWithJsExport|inlineFunctionAnnotations|interfaceWithJsExport|jsExportWithMultipleFiles|typeScriptExportsPerFile|typeScriptExportsPerModule|fileNameClash|jsCode|jsCodeWithConstString|jsModuleAnnotation|jsModuleAnnotationOnObjectWithUsage|jsName"), TargetBackend.WASM, false);
   }
 
   @Test
@@ -181,12 +181,6 @@ public class FirWasmInvalidationPerFileTestGenerated extends AbstractFirWasmInva
   }
 
   @Test
-  @TestMetadata("fileNameClash")
-  public void testFileNameClash() {
-    runTest("js/js.translator/testData/incremental/invalidation/fileNameClash/");
-  }
-
-  @Test
   @TestMetadata("friendDependency")
   public void testFriendDependency() {
     runTest("js/js.translator/testData/incremental/invalidation/friendDependency/");
@@ -295,18 +289,6 @@ public class FirWasmInvalidationPerFileTestGenerated extends AbstractFirWasmInva
   }
 
   @Test
-  @TestMetadata("jsCode")
-  public void testJsCode() {
-    runTest("js/js.translator/testData/incremental/invalidation/jsCode/");
-  }
-
-  @Test
-  @TestMetadata("jsCodeWithConstString")
-  public void testJsCodeWithConstString() {
-    runTest("js/js.translator/testData/incremental/invalidation/jsCodeWithConstString/");
-  }
-
-  @Test
   @TestMetadata("jsCodeWithConstStringFromOtherModule")
   public void testJsCodeWithConstStringFromOtherModule() {
     runTest("js/js.translator/testData/incremental/invalidation/jsCodeWithConstStringFromOtherModule/");
@@ -322,24 +304,6 @@ public class FirWasmInvalidationPerFileTestGenerated extends AbstractFirWasmInva
   @TestMetadata("jsExportReexport")
   public void testJsExportReexport() {
     runTest("js/js.translator/testData/incremental/invalidation/jsExportReexport/");
-  }
-
-  @Test
-  @TestMetadata("jsModuleAnnotation")
-  public void testJsModuleAnnotation() {
-    runTest("js/js.translator/testData/incremental/invalidation/jsModuleAnnotation/");
-  }
-
-  @Test
-  @TestMetadata("jsModuleAnnotationOnObjectWithUsage")
-  public void testJsModuleAnnotationOnObjectWithUsage() {
-    runTest("js/js.translator/testData/incremental/invalidation/jsModuleAnnotationOnObjectWithUsage/");
-  }
-
-  @Test
-  @TestMetadata("jsName")
-  public void testJsName() {
-    runTest("js/js.translator/testData/incremental/invalidation/jsName/");
   }
 
   @Test

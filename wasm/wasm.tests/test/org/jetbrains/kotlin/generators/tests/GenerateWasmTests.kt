@@ -61,6 +61,12 @@ fun main(args: Array<String>) {
                     "jsExportWithMultipleFiles",
                     "typeScriptExportsPerFile",
                     "typeScriptExportsPerModule",
+                    "fileNameClash",
+                    "jsCode",
+                    "jsCodeWithConstString",
+                    "jsModuleAnnotation",
+                    "jsModuleAnnotationOnObjectWithUsage",
+                    "jsName",
                 )
                 model(
                     "incremental/invalidation/",
